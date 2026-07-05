@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 (2026-07-05)
+
+### Fixed
+- Fixed `Goto`/`Lbl` resolving letter+digit labels (e.g. `A1`) to the wrong target
+- Fixed `List.set()` raising `IndexError` when storing beyond the current list length
+- Added native support for the `⁻` negation glyph
+- Fixed multi-row matrix literals being parsed as implied multiplication
+- `Menu(` now evaluates title and description expressions before passing them to the I/O backend
+
 ## 0.2.0 (2026-07-05)
 
 ### Fixed
