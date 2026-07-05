@@ -6,6 +6,11 @@ Currently, all `.bas` files in tests/ run except circle.bas (due to lack of grap
 
 Use `pb.py -i vt100` to run programs which need a working home screen.
 
+## Running the tests
+
+	pip install pytest
+	pytest
+
 If you run `pb.py` with no filename, it launches an interactive shell.
 
 	Usage: pb.py [options] [filename]
