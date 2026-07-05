@@ -1,6 +1,6 @@
 import pytest
 
-from pitybas.common import StopError, ReturnError
+from pitybas.common import StopError, ReturnError, ExecutionError
 from conftest import run
 
 
@@ -74,3 +74,16 @@ def test_stop_raises_stop_error_and_halts_execution():
 def test_return_raises_return_error_and_halts_execution():
     vm = run('Disp "before"\nReturn\nDisp "after"')
     assert vm.io.disps == ['before']
+
+
+def test_prgm_raises_execution_error_when_subprogram_not_found(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ExecutionError, match='prgm'):
+        run('prgmMISSING')
+
+
+def test_prgm_executes_subprogram_file(tmp_path, monkeypatch):
+    (tmp_path / 'helper.bas').write_text('2->A')
+    monkeypatch.chdir(tmp_path)
+    # prgmHELPER should locate helper.bas and execute it without error
+    run('prgmHELPER')
