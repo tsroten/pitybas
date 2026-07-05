@@ -17,15 +17,15 @@ class IO:
         pass
 
     def clear(self):
-        print '-'*16
+        print('-'*16)
 
     def input(self, msg, is_str=False):
         while True:
             try:
                 if msg:
-                    print msg,
+                    print(msg, end=' ')
 
-                line = raw_input()
+                line = input()
                 if not is_str:
                     val = Parser.parse_line(self.vm, line)
                 else:
@@ -33,17 +33,17 @@ class IO:
 
                 return val
             except ParseError:
-                print 'ERR:DATA'
-                print
+                print('ERR:DATA')
+                print()
 
     def getkey(self):
         raise NotImplementedError
 
     def output(self, x, y, msg):
-        print msg
+        print(msg)
 
     def disp(self, msg=''):
-        print msg
+        print(msg)
 
     def pause(self, msg=''):
         if msg: self.disp(msg)
@@ -56,16 +56,16 @@ class IO:
             i = 1
 
             for title, entries in menu:
-                print '-[ %s ]-' % self.vm.get(title)
+                print('-[ %s ]-' % self.vm.get(title))
                 for name, label in entries:
-                    print '%i: %s' % (i, self.vm.get(name))
+                    print('%i: %s' % (i, self.vm.get(name)))
                     lookup.append(label)
                     i += 1
 
             choice = self.input('choice?', True)
-            print
+            print()
             if choice.isdigit() and 0 < int(choice) <= len(lookup):
                 label = lookup[int(choice)-1]
                 return label
             else:
-                print 'invalid choice'
+                print('invalid choice')

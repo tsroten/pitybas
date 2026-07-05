@@ -99,7 +99,7 @@ class VT:
         self.row, self.col = 1, 1
         if reset:
             self.lines = []
-            for i in xrange(self.height):
+            for i in range(self.height):
                 self.lines.append([' ']*self.width)
 
     def scroll(self):
@@ -110,16 +110,14 @@ class VT:
     def flush(self):
         self.clear(reset=False)
         data = '\n'.join(''.join(line) for line in self.lines) + '\n'
-        sys.stdout.write(
-            data.encode(sys.stdout.encoding, 'replace')
-        )
+        sys.stdout.write(data)
 
     def move(self, row, col):
         self.row, self.col = row, col
         self.e('[%i;%iH' % (row, col))
 
     def wrap(self, msg):
-        msg = unicode(msg)
+        msg = str(msg)
         first = self.width - self.col + 1
         first, msg = msg[:first], msg[first:]
         lines = [first]
@@ -147,7 +145,6 @@ class VT:
 
             for char in line:
                 self.lines[row-1][col-1] = char
-                char = char.encode(sys.stdout.encoding, 'replace')
                 sys.stdout.write(char)
                 col += 1
 
@@ -222,10 +219,10 @@ class IO:
                 self.vt.move(9, 1)
 
                 if msg:
-                    print msg,
+                    print(msg, end=' ')
 
                 self.vt.e('[?25h')
-                line = raw_input()
+                line = input()
                 self.vt.e('[?25l')
 
                 self.vt.flush()
@@ -237,8 +234,8 @@ class IO:
 
                 return val
             except ParseError:
-                print 'ERR:DATA'
-                print
+                print('ERR:DATA')
+                print()
 
     def getkey(self):
         key = self.vt.getch()
@@ -271,20 +268,19 @@ class IO:
             i = 1
 
             for title, entries in menu:
-                print '-[ %s ]-' % self.vm.get(title)
+                print('-[ %s ]-' % self.vm.get(title))
                 for name, label in entries:
-                    print '%i: %s' % (i, self.vm.get(name))
+                    print('%i: %s' % (i, self.vm.get(name)))
                     lookup.append(label)
                     i += 1
 
             self.vt.e('[?25h')
-            choice = raw_input('choice? ')
+            choice = input('choice? ')
             self.vt.e('[?25l')
-            print
+            print()
             if choice.isdigit() and 0 < int(choice) <= len(lookup):
                 label = lookup[int(choice)-1]
                 self.vt.flush()
                 return label
             else:
-                print 'invalid choice'
-
+                print('invalid choice')

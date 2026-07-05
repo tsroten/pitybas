@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-import tokens
-from common import ParseError, is_number
-from expression import Expression, Bracketed, FunctionArgs, Tuple, ParenExpr, ListExpr, MatrixExpr
-from expression import Base as BaseExpression
+from . import tokens
+from .common import ParseError, is_number
+from .expression import Expression, Bracketed, FunctionArgs, Tuple, ParenExpr, ListExpr, MatrixExpr
+from .expression import Base as BaseExpression
 
 class Parser:
     LOOKUP = {}
@@ -11,10 +11,10 @@ class Parser:
     LOOKUP.update(tokens.Function.tokens)
 
     SYMBOLS = []
-    TOKENS = tokens.Token.tokens.keys()
-    VARIABLES = tokens.Variable.tokens.keys()
-    FUNCTIONS = tokens.Function.tokens.keys()
-    OPERATORS = tokens.Operator.tokens.keys()
+    TOKENS = list(tokens.Token.tokens.keys())
+    VARIABLES = list(tokens.Variable.tokens.keys())
+    FUNCTIONS = list(tokens.Function.tokens.keys())
+    OPERATORS = list(tokens.Operator.tokens.keys())
     TOKENS += VARIABLES + FUNCTIONS
 
     TOKENS.sort()
@@ -25,7 +25,7 @@ class Parser:
             SYMBOLS.append(t[0])
 
     def __init__(self, source):
-        self.source = unicode(source)
+        self.source = str(source)
         self.length = len(source)
         self.pos = 0
         self.line = 0
@@ -82,7 +82,7 @@ class Parser:
                 if new:
                     # implied expressions need to be added to tuples in their entirety, instead of just their last element
                     pops = []
-                    for i in xrange(0, len(new)-1):
+                    for i in range(0, len(new)-1):
                         e, t = new[i], new[i+1]
                         if isinstance(e, Expression) and isinstance(t, Tuple):
                             pops.append(i)
@@ -95,7 +95,7 @@ class Parser:
                     # tokens with the absorb mechanic can steal the next token from the line if it matches a list of types
                     last = new[0]
                     pops = []
-                    for i in xrange(1, len(new)):
+                    for i in range(1, len(new)):
                         token = new[i]
                         if isinstance(token, last.absorbs):
                             if isinstance(token, BaseExpression):
@@ -151,7 +151,7 @@ class Parser:
                 if self.stack:
                     stacks = []
                     l = len(self.stack)
-                    for i in xrange(l):
+                    for i in range(l):
                         stack = self.stack.pop(l-i-1)
                         if isinstance(stack, Bracketed):
                             if stack.close(char):

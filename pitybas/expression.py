@@ -1,5 +1,5 @@
-import tokens
-from common import ExpressionError, Pri, is_number
+from . import tokens
+from .common import ExpressionError, Pri, is_number
 
 class Base:
     priority = Pri.NONE
@@ -74,7 +74,7 @@ class Base:
         # if we don't have a proper variable:token:variable pairing in the token list,
         # this method will allow tokens to fill in an implied variable to their left or right
         new = []
-        for i in xrange(len(self.contents)):
+        for i in range(len(self.contents)):
             t = self.contents[i]
             if (i % 2 == 0 and not t.can_get):
                 left = None
@@ -117,7 +117,7 @@ class Base:
         # or we can pad "in-place" tokens with a null to be passed as right
 
         # make sure expression is ordered (value, token, value, token, value)
-        for i in xrange(len(self.contents)):
+        for i in range(len(self.contents)):
             t = self.contents[i]
 
             if (i % 2 == 0 and not t.can_get) or ( i % 2 == 1 and not t.can_run):
@@ -125,7 +125,7 @@ class Base:
 
         # determine whether we have any tokens after a ->
         found_stor = False
-        for i in xrange(len(self.contents)):
+        for i in range(len(self.contents)):
             t = self.contents[i]
             odd = i % 2
 
@@ -142,7 +142,7 @@ class Base:
 
         order = {}
 
-        for i in xrange(len(self.contents)):
+        for i in range(len(self.contents)):
             token = self.contents[i]
             p = token.priority
             if p >= 0:

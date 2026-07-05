@@ -1,7 +1,7 @@
 import sys, traceback
 from optparse import OptionParser
-from interpret import Interpreter, Repl
-from common import Error
+from .interpret import Interpreter, Repl
+from .common import Error
 from pitybas.io.vt100 import IO as vt100
 
 parser = OptionParser(usage='Usage: pb.py [options] filename')
@@ -24,14 +24,14 @@ if options.io == 'vt100':
 if args:
     vm = Interpreter.from_file(args[0], history=20, io=io)
 else:
-    print 'Welcome to pitybas. Press Ctrl-D to exit.'
-    print
+    print('Welcome to pitybas. Press Ctrl-D to exit.')
+    print()
     vm = Repl(history=20, io=io)
 
 if options.verbose:
     vm.print_tokens()
-    print
-    print '-===[ Running %s ]===-' % args[0]
+    print()
+    print('-===[ Running %s ]===-' % args[0])
 
 if options.ast:
     print_ast(vm)
@@ -42,18 +42,18 @@ try:
     if options.stacktrace:
         vm.print_stacktrace(options.vardump)
 except KeyboardInterrupt:
-    print
+    print()
     vm.print_stacktrace(options.vardump)
-except Exception, e:
-    print
-    print
+except Exception as e:
+    print()
+    print()
     vm.print_stacktrace(options.vardump)
 
-    print '%s on line %i:' % (e.__class__.__name__, vm.line),
+    print('%s on line %i:' % (e.__class__.__name__, vm.line), end=' ')
 
     if isinstance(e, Error):
-        print e.msg
+        print(e.msg)
     else:
-        print
-        print '-===[ Python traceback ]===-'
-        print traceback.format_exc()
+        print()
+        print('-===[ Python traceback ]===-')
+        print(traceback.format_exc())

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import datetime
 import decimal
-import fractions
 import math
 import random
 import string
+from functools import reduce
 
-from common import Pri, ExecutionError, StopError, ReturnError
-from expression import Tuple, Expression, Arguments, ListExpr, MatrixExpr
+from .common import Pri, ExecutionError, StopError, ReturnError
+from .expression import Tuple, Expression, Arguments, ListExpr, MatrixExpr
 
 # helpers
 
@@ -63,9 +63,7 @@ class Tracker(type):
 class InvalidOperation(Exception):
     pass
 
-class Parent:
-    __metaclass__ = Tracker
-
+class Parent(metaclass=Tracker):
     @classmethod
     def add(cls, sub, name, attrs):
         if 'token' in attrs:
@@ -93,18 +91,26 @@ class Parent:
         self.arg = token
         self.absorbs = ()
 
-    def __cmp__(self, token):
+    def __lt__(self, token):
         try:
-            if self.priority < token.priority:
-                return -1
-            elif self.priority == token.priority:
-                return 0
-            elif self.priority > token.priority:
-                return 1
-            else:
-                raise AttributeError
+            return self.priority < token.priority
         except AttributeError:
             return NotImplemented
+
+    def __gt__(self, token):
+        try:
+            return self.priority > token.priority
+        except AttributeError:
+            return NotImplemented
+
+    def __eq__(self, token):
+        try:
+            return self.priority == token.priority
+        except AttributeError:
+            return NotImplemented
+
+    def __hash__(self):
+        return id(self)
 
     def __repr__(self):
         return repr(self.token)
@@ -212,7 +218,7 @@ class List(Variable, Stub):
 
     def dim(self, vm, value=None):
         if value is not None:
-            assert isinstance(value, (int, long))
+            assert isinstance(value, int)
 
             try:
                 l = vm.get_list(self.name)
@@ -227,7 +233,7 @@ class List(Variable, Stub):
     def get(self, vm):
         if self.arg:
             arg = vm.get(self.arg)[0]
-            assert isinstance(arg, (int, long))
+            assert isinstance(arg, int)
             return vm.get_list(self.name)[arg-1]
 
         return vm.get_list(self.name)
@@ -235,8 +241,8 @@ class List(Variable, Stub):
     def set(self, vm, value):
         if self.arg:
             arg = vm.get(self.arg)[0]
-            assert isinstance(arg, (int, long))
-            assert isinstance(value, (int, long, float, complex))
+            assert isinstance(arg, int)
+            assert isinstance(value, (int, float, complex))
 
             l = vm.get_list(self.name)
             i = arg - 1
@@ -278,7 +284,7 @@ class Matrix(Variable, Stub):
                 m = [[]]
 
             m = m[:a]
-            for i in xrange(len(m), a):
+            for i in range(len(m), a):
                 n = ([0] * b)
                 m.append(n)
 
@@ -300,7 +306,7 @@ class Matrix(Variable, Stub):
         if self.arg:
             arg = vm.get(self.arg)
             assert isinstance(arg, list) and len(arg) == 2
-            assert isinstance(value, (int, long, float, complex))
+            assert isinstance(value, (int, float, complex))
 
             m = vm.get_matrix(self.name)
             m[arg[0]-1][arg[1]-1] = value
@@ -353,11 +359,11 @@ class Fill(Function):
         var = var.flatten()
         num = vm.get(num)
 
-        assert isinstance(num, (int, long, float, complex))
+        assert isinstance(num, (int, float, complex))
         assert isinstance(var, (List, Matrix))
 
         if isinstance(var, List):
-            l = [num for i in xrange(len(vm.get(var)))]
+            l = [num for i in range(len(vm.get(var)))]
             var.set(vm, l)
         elif isinstance(var, Matrix):
             m = []
@@ -384,7 +390,7 @@ class seq(Function):
             step = vm.get(arg[4])
         out = []
         start, end = vm.get(arg[2]), vm.get(arg[3])
-        for i in xrange(start, end + 1, step):
+        for i in range(start, end + 1, step):
             vm.set_var(var.token, i)
             out.append(vm.get(expr))
         return out
@@ -436,7 +442,7 @@ for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
 class Str(SimpleVar, Stub):
     pass
 
-for i in xrange(10):
+for i in range(10):
     add_class('Str%i' % i, StrVar)
 
 # operators
@@ -461,7 +467,7 @@ class FloatOperator(Operator, Stub):
     @get
     def run(self, vm, left, right):
         # TODO: be smarter about when to coerce to float
-        if isinstance(left, (int, long)) or isinstance(right, (int, long)):
+        if isinstance(left, int) or isinstance(right, int):
             decimal.getcontext().prec = max(len(str(left)), len(str(right)))
             left = decimal.Decimal(left)
             right = decimal.Decimal(right)
@@ -534,9 +540,9 @@ class transpose(RightExponent):
     def op(self, left, right):
         vm = {'tmp': left}
         rows, cols = Matrix('tmp').dim(vm)
-        out = [[0] * rows for i in xrange(cols)]
-        for y in xrange(rows):
-            for x in xrange(cols):
+        out = [[0] * rows for i in range(cols)]
+        for y in range(rows):
+            for x in range(cols):
                 out[x][y] = left[y][x]
         return out
 
@@ -597,9 +603,9 @@ class gcd(Function):
     def call(self, vm, args):
         assert len(args) == 1 and isinstance(args[0], list) or len(args) == 2
         if len(args) == 1:
-            return reduce(lambda a, b: fractions.gcd(a, b), args[0])
+            return reduce(lambda a, b: math.gcd(a, b), args[0])
         else:
-            return fractions.gcd(*args)
+            return math.gcd(*args)
 
     # TODO: list support
     @staticmethod
@@ -620,7 +626,7 @@ class lcm(Function):
 
     @staticmethod
     def lcm(a, b):
-        return a * b / gcd.gcd(a, b)
+        return a * b // gcd.gcd(a, b)
 
     @classmethod
     def lcm_list(cls, *args):
@@ -696,7 +702,7 @@ class mod(Function):
 
 class expr(MathExprFunction):
     def call(self, vm, arg):
-        from parse import Parser, ParseError
+        from .parse import Parser, ParseError
         return Parser.parse_line(vm, arg)
 
 # trig
@@ -757,7 +763,7 @@ class nPr(Operator):
     priority = Pri.PROB
 
     def op(self, left, right):
-        return math.factorial(left) / math.factorial((left - right))
+        return math.factorial(left) // math.factorial((left - right))
 
 class nCr(Operator):
     priority = Pri.PROB
@@ -786,7 +792,7 @@ class rand(Variable):
 class rand(Function):
     def call(self, vm, args):
         assert len(args) == 1
-        return [random.random() for i in xrange(args[0])]
+        return [random.random() for i in range(args[0])]
 
 class randInt(Function):
     def call(self, vm, args):
@@ -798,7 +804,7 @@ class randInt(Function):
         if len(args) == 2:
             return random.randint(*args)
 
-        return [random.randint(*args[:2]) for i in xrange(args[2])]
+        return [random.randint(*args[:2]) for i in range(args[2])]
 
 class randNorm(Function):
     def call(self, vm, args):
@@ -809,7 +815,7 @@ class randNorm(Function):
         else:
             n = 1
 
-        return [random.normalvariate(*args) for i in xrange(n)]
+        return [random.normalvariate(*args) for i in range(n)]
 
 class randBin(Function):
     def call(self, vm, args):
@@ -897,8 +903,8 @@ class GreaterOrEqualsToken(GreaterOrEquals):
 
 class inString(Function):
     def call(self, vm, args):
-        assert len(args) == 2 or len(args) == 3 and isinstance(args[2], (int, long))
-        assert isinstance(args[0], basestring) and isinstance(args[1], basestring)
+        assert len(args) == 2 or len(args) == 3 and isinstance(args[2], int)
+        assert isinstance(args[0], str) and isinstance(args[1], str)
         haystack = args[0]
         needle = args[1]
         skip = 0
@@ -1111,9 +1117,9 @@ class Lbl(StubToken):
         elif isinstance(arg, Variable):
             label = arg.token
         elif isinstance(arg, Expression):
-            label = unicode(arg.flatten())
+            label = str(arg.flatten())
 
-        return unicode(label)
+        return str(label)
 
     def get_label(self, vm):
         return Lbl.guess_label(vm, self.arg)
@@ -1303,7 +1309,7 @@ class pgrm(Token):
     done = False
 
     def dynamic(self, char):
-        if not self.done and char in string.uppercase:
+        if not self.done and char in string.ascii_uppercase:
             self.name += char
             return True
         self.done = True
@@ -1320,7 +1326,7 @@ class pgrm(Token):
 
 class REPL(Token):
     def run(self, vm):
-        from parse import Parser, ParseError
+        from .parse import Parser, ParseError
 
         if vm.repl_serial != vm.serial:
             vm.repl_serial = vm.serial
@@ -1335,9 +1341,9 @@ class REPL(Token):
             repl_line = None
             while not repl_line:
                 try:
-                    repl_line = raw_input('>>> ')
+                    repl_line = input('>>> ')
                 except KeyboardInterrupt:
-                    print
+                    print()
                 except EOFError:
                     code = [[EOF()]]
                     break
@@ -1345,8 +1351,8 @@ class REPL(Token):
             if not code:
                 try:
                     code = Parser(repl_line + '\n').parse()
-                except ParseError, e:
-                    print e
+                except ParseError as e:
+                    print(e)
 
         for line in reversed(code):
             vm.code.insert(self.line, line)

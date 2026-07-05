@@ -4,12 +4,12 @@ import os
 import time
 import traceback
 
-from parse import Parser, ParseError
-from tokens import EOF, Value, REPL
-from common import ExecutionError, StopError, ReturnError
+from .parse import Parser, ParseError
+from .tokens import EOF, Value, REPL
+from .common import ExecutionError, StopError, ReturnError
 
 from pitybas.io.simple import IO
-from expression import Base
+from .expression import Base
 
 class Interpreter(object):
     @classmethod
@@ -19,7 +19,7 @@ class Interpreter(object):
 
     @classmethod
     def from_file(cls, filename, *args, **kwargs):
-        string = open(filename, 'r').read().decode('utf8')
+        string = open(filename, 'r', encoding='utf8').read()
         vm = Interpreter.from_string(string, *args, **kwargs)
         vm.name = os.path.basename(filename)
         return vm
@@ -120,12 +120,12 @@ class Interpreter(object):
                 if isinstance(cur, types):
                     return i, 0, cur
 
-        for i in xrange(pos, len(self.code)):
+        for i in range(pos, len(self.code)):
             ret = y(i)
             if ret: yield ret
 
         if wrap:
-            for i in xrange(0, pos):
+            for i in range(0, pos):
                 ret = y(i)
                 if ret: yield ret
 
@@ -159,7 +159,7 @@ class Interpreter(object):
         return ret
 
     def disp_round(self, num):
-        if not isinstance(num, (decimal.Decimal, int, long, float, complex)):
+        if not isinstance(num, (decimal.Decimal, int, float, complex)):
             return num
 
         if self.fixed < 0:
@@ -191,58 +191,58 @@ class Interpreter(object):
                 while not isinstance(self.cur(), EOF):
                     cur = self.cur()
                     self.run(cur)
-            except StopError, e:
-                if e.message:
-                    print
-                    print 'Stopped:', e.message
-            except ReturnError, e:
-                if e.message:
-                    print
-                    print 'Returned:', e.message
+            except StopError as e:
+                if e.args:
+                    print()
+                    print('Stopped:', e.args[0])
+            except ReturnError as e:
+                if e.args:
+                    print()
+                    print('Returned:', e.args[0])
 
     def print_tokens(self):
         for line in self.code:
-            print (', '.join(repr(n) for n in line)).replace("u'", "'")
+            print((', '.join(repr(n) for n in line)).replace("u'", "'"))
 
     def print_ast(self, start=0, end=None, highlight=None):
         if end is None:
             end = len(self.code)
 
-        for i in xrange(max(start, 0), min(end, len(self.code))):
+        for i in range(max(start, 0), min(end, len(self.code))):
             line = self.code[i]
             if i == highlight - 1:
-                print '>>>> {}'.format(line)
+                print('>>>> {}'.format(line))
             else:
-                print '{:3}: {}'.format(i, line)
+                print('{:3}: {}'.format(i, line))
 
     def print_stacktrace(self, num=None, vardump=False):
         if not num:
             num = self.hist_len
 
         if self.name:
-            print '-===[ Dumping {} ]===-'.format(self.name)
+            print('-===[ Dumping {} ]===-'.format(self.name))
 
         if self.history:
-            print
-            print '-===[ Stacktrace ]===-'
+            print()
+            print('-===[ Stacktrace ]===-')
 
         for row, col, cur in self.history[-num:]:
-            print ('[{}, {}]:'.format(row, col)).ljust(9), repr(cur).replace("u'", '').replace("'", '')
+            print(('[{}, {}]:'.format(row, col)).ljust(9), repr(cur).replace("u'", '').replace("'", ''))
 
         if self.history:
-            print
+            print()
 
-        print '-===[ Code (row {}, col {}) ]===-'.format(self.line, self.col)
-        h = num / 2
+        print('-===[ Code (row {}, col {}) ]===-'.format(self.line, self.col))
+        h = num // 2
         self.print_ast(self.line - h, self.line + h, highlight=self.line)
-        print
+        print()
 
         if vardump:
-            print
-            print '-===[ Variable Dump ]===-'
+            print()
+            print('-===[ Variable Dump ]===-')
             import pprint
             pprint.pprint(self.vars)
-            print
+            print()
 
     def run_pgrm(self, name):
         for ref in os.listdir('.'):
@@ -263,7 +263,7 @@ class Repl(Interpreter):
         while not isinstance(self.cur(), EOF):
             try:
                 super(Repl, self).execute()
-            except ParseError, e:
-                print e
+            except ParseError as e:
+                print(e)
             except:
-                print traceback.format_exc()
+                print(traceback.format_exc())
