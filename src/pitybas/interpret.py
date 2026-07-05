@@ -244,7 +244,7 @@ class Interpreter(object):
             pprint.pprint(self.vars)
             print()
 
-    def run_pgrm(self, name):
+    def run_prgm(self, name):
         for ref in os.listdir('.'):
             if ref.endswith('.bas'):
                 test = ref.rsplit('.', 1)[0]
@@ -252,7 +252,7 @@ class Interpreter(object):
                     sub = Interpreter.from_file(ref)
                     sub.execute()
                     return
-        raise ExecutionError('pgrm{} not found'.format(name))
+        raise ExecutionError('prgm{} not found'.format(name))
 
 class Repl(Interpreter):
     def __init__(self, code=[], **kwargs):

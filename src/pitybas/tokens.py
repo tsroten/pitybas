@@ -1285,7 +1285,7 @@ class getKey(Variable):
     def get(self, vm):
         return vm.io.getkey()
 
-class pgrm(Token):
+class prgm(Token):
     done = False
 
     def dynamic(self, char):
@@ -1299,10 +1299,10 @@ class pgrm(Token):
         self.name = ''
 
     def run(self, vm):
-        vm.run_pgrm(self.name)
+        vm.run_prgm(self.name)
 
     def __repr__(self):
-        return 'pgrm' + self.name
+        return 'prgm' + self.name
 
 class REPL(Token):
     def run(self, vm):

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0 (2026-07-05)
+
+### Fixed
+- Corrected the `prgm` token spelling (was `pgrm`). The parser now correctly recognises sub-program calls written as `prgmNAME`, matching real TI-83/84 BASIC syntax.
+
 ## 0.1.0 (2026-07-05)
 
 Initial release. pitybas was originally written by [Ryan Hileman](https://github.com/lunixbochs).

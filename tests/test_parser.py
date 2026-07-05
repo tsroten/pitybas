@@ -74,3 +74,18 @@ def test_parse_line_helper_evaluates_expression():
     vm.execute()
     result = Parser.parse_line(vm, 'A+1')
     assert result == 2
+
+
+def test_prgm_parses_to_correct_token():
+    code = Parser('prgmFOO').parse()
+    token = code[0][0]
+    assert isinstance(token, tokens.prgm)
+    assert token.name == 'FOO'
+
+
+def test_pgrm_misspelling_raises_parse_error():
+    # 'pgrm' (letters transposed) is not a valid token; the correct spelling
+    # is 'prgm'. The parser should reject it rather than silently misfire.
+    from pitybas.common import ParseError
+    with pytest.raises(ParseError):
+        Parser('pgrm').parse()
