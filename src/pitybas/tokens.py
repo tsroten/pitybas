@@ -1095,7 +1095,20 @@ class Lbl(StubToken):
         elif isinstance(arg, Variable):
             label = arg.token
         elif isinstance(arg, Expression):
-            label = str(arg.flatten())
+            # A letter+digit label (e.g. "M1") parses as implied
+            # multiplication (Variable * Value), not a single token, so
+            # arg.flatten() can't collapse it to one. Value.token is a
+            # fixed class-level placeholder ("Value"), not the digit
+            # actually parsed, so str(arg.flatten()) would render every
+            # such expression identically regardless of the literal.
+            # Reconstruct the label from each part's real value instead.
+            parts = []
+            for token in arg.contents:
+                if isinstance(token, Value):
+                    parts.append(str(token.value))
+                elif isinstance(token, Variable):
+                    parts.append(token.token)
+            label = ''.join(parts)
 
         return str(label)
 

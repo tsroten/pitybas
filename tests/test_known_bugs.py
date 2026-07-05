@@ -56,6 +56,17 @@ Bug 8 (fixed): cli.main (pitybas/cli.py) printed
 `--verbose` branch. Since `args` is empty when no filename is given
 (REPL mode), `pb -v` raised IndexError before the REPL could start.
 Fixed to only print that line when a filename was given.
+
+Bug 9 (fixed): Lbl.guess_label (pitybas/tokens.py) rendered a letter+digit
+label (e.g. "M1", which parses as implied multiplication -- Variable *
+Value, not a single token) by falling back to `str(arg.flatten())`. That
+joins each raw token's `.token` attribute, but `Value.token` is a fixed
+class-level placeholder string ("Value"), not the digit actually parsed.
+So every "<letter><digit>" label collapsed to the same string regardless
+of the digit, and `Goto M2`/`Goto M3` both resolved to whichever `Lbl
+M<n>` appeared first in the source. Fixed by reconstructing the label
+from each part's real value (`Variable.token` / `Value.value`) instead of
+relying on the generic `.token` placeholder.
 """
 import io as std_io
 
@@ -134,3 +145,16 @@ def test_verbose_repl_with_no_filename_does_not_crash(monkeypatch):
 
     monkeypatch.setattr('sys.stdin', std_io.StringIO(''))
     main(['-v'])
+
+
+def test_goto_letter_digit_label_reaches_matching_label():
+    """Reproduces bug 9: Goto M2 must land at Lbl M2, not Lbl M1, even
+    though both labels parse as the same kind of implied-multiplication
+    expression (Variable * Value)."""
+    vm = run(
+        'Goto M2\n'
+        'Lbl M1\nDisp "one"\n'
+        'Lbl M2\nDisp "two"\n'
+        'Lbl M3\nDisp "three"'
+    )
+    assert vm.io.disps == ['two', 'three']
