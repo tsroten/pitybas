@@ -25,8 +25,15 @@ class Base:
         if self.contents:
             prev = self.contents[-1]
 
+            # Negate (the real calculator's dedicated negation token) is
+            # never ambiguous with a binary operator like Minus is, so it
+            # always collapses to * -1, regardless of position.
+            if isinstance(prev, tokens.Negate):
+                self.contents.pop()
+                self.contents += [tokens.Value(-1), tokens.Mult()]
+
             # the minus sign implies a * -1 when used by itself
-            if isinstance(prev, tokens.Minus):
+            elif isinstance(prev, tokens.Minus):
                 # TODO: fix this the rest of the way
                 if len(self.contents) == 1:
                     self.contents.pop()

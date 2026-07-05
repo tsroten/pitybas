@@ -503,6 +503,15 @@ class Minus(AddSub):
     def op(self, left, right):
         return left - right
 
+class Negate(Token):
+    """The real calculator's dedicated negation key (raised minus),
+    distinct from the Minus/subtraction token. Unlike '-', it is never
+    ambiguous with a binary operator, so Base.append() (expression.py)
+    always collapses "Negate X" into "-1 * X" regardless of where it
+    appears -- not just when it happens to lead the expression."""
+    token = u'⁻'
+    priority = Pri.NONE
+
 class Mult(MultDiv):
     token = '*'
 
