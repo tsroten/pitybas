@@ -30,10 +30,38 @@ whether to treat typed input as a raw string via `isinstance(var, Str)`,
 which was always False for Str0..Str9, so `Input "msg", Str0` always
 parsed the typed input as an expression instead of accepting a raw
 string. Fixed by checking `isinstance(var, StrVar)` instead.
+
+Bug 5 (fixed): nCr.op (pitybas/tokens.py) called `math.fact`, which does
+not exist on the `math` module (it's `math.factorial`), so any use of
+nCr raised AttributeError. Fixed to call `math.factorial` and, to match
+the sibling `nPr` operator, use `//` so the result is an int rather than
+a float.
+
+Bug 6 (fixed): lcm.call (pitybas/tokens.py) reduced a list second
+argument with `a = self.lcm_list(*b)` instead of `b = self.lcm_list(*b)`,
+clobbering the first argument and leaving the second argument as an
+unreduced list. `lcm(a, b)` then did `a % list`, raising TypeError.
+Fixed to assign the reduced value back to `b`.
+
+Bug 7 (fixed): Menu.run (pitybas/tokens.py) built each menu's
+(description, label) pairs with a bare `zip()`, a single-use iterator.
+IO.menu() (pitybas/io/simple.py, pitybas/io/vt100.py) loops until a
+valid choice is entered, re-iterating those pairs on every retry -- so
+after the first (invalid) attempt exhausted the zip, every retry
+rendered zero options and no choice could ever succeed. Fixed by
+materializing the zip into a list.
+
+Bug 8 (fixed): cli.main (pitybas/cli.py) printed
+`'-===[ Running %s ]===-' % args[0]` unconditionally inside the
+`--verbose` branch. Since `args` is empty when no filename is given
+(REPL mode), `pb -v` raised IndexError before the REPL could start.
+Fixed to only print that line when a filename was given.
 """
+import io as std_io
+
 import pytest
 
-from conftest import run
+from conftest import MockIO, run
 
 
 def disp_of(source):
@@ -64,3 +92,45 @@ def test_fix_after_division_does_not_crash():
 
 def test_input_treats_str_variable_as_raw_string():
     assert run('Input "name?", Str0\nDisp Str0', inputs=['bob']).io.disps == ['bob']
+
+
+def test_nCr_does_not_crash():
+    assert disp_of('Disp 5 nCr 2') == [10]
+
+
+def test_lcm_reduces_second_list_argument():
+    assert disp_of('Disp lcm(4,{2,3})') == [12]
+
+
+def test_menu_entries_are_reusable_across_retries():
+    """Reproduces bug 7: a MockIO whose menu() re-iterates `entries` twice
+    (as the real IO backends do on an invalid-choice retry) must see the
+    same options both times."""
+    from pitybas.interpret import Interpreter
+
+    class MenuIO(MockIO):
+        def menu(self, menu):
+            for title, entries in menu:
+                first_pass = list(entries)
+                second_pass = list(entries)
+
+            assert first_pass, 'menu should have options on the first pass'
+            assert first_pass == second_pass, \
+                'menu entries were exhausted on the second pass'
+
+            _, label = second_pass[0]
+            return label
+
+    vm = Interpreter.from_string(
+        'Menu("t","e1",A,"e2",B)\nDisp "no\nLbl A\nDisp "yes',
+        io=lambda vm: MenuIO(vm),
+    )
+    vm.execute()
+    assert vm.io.disps == ['yes']
+
+
+def test_verbose_repl_with_no_filename_does_not_crash(monkeypatch):
+    from pitybas.cli import main
+
+    monkeypatch.setattr('sys.stdin', std_io.StringIO(''))
+    main(['-v'])

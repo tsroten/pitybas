@@ -35,7 +35,8 @@ def main(argv=None):
     if options.verbose:
         vm.print_tokens()
         print()
-        print('-===[ Running %s ]===-' % args[0])
+        if args:
+            print('-===[ Running %s ]===-' % args[0])
 
     if options.ast:
         print_ast(vm)
