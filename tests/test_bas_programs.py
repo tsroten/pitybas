@@ -30,9 +30,12 @@ def test_bas_program_runs_without_error(filename):
 
 
 def test_trig_bas_runs_with_prompted_input():
+    # C is 5, and "C > 10 + 1" evaluates the addition before the
+    # comparison (addition binds tighter than relational operators, as on
+    # a real TI calculator), i.e. 5 > 11, so the Else branch runs.
     vm = make_vm(load('trig.bas'), inputs=['3', '4'])
     vm.execute()
-    assert vm.io.disps == [5, 'Larger than 10', 4, 5]
+    assert vm.io.disps == [5, 'Smaller than 11', 4, 5]
 
 
 @pytest.mark.skip(reason='circle.bas needs graph-screen functions (Pt-On) not implemented by any IO backend; see README')

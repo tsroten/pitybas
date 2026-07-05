@@ -17,14 +17,12 @@ def disp_of(source, inputs=None):
     ('Disp 2^3', [8]),
     ('Disp 3^2', [9]),
     ('Disp (2+3)*4', [20]),
+    ('Disp 2+3*4', [14]),
     ('Disp -3+5', [2]),
     ('Disp 2!', [2]),
     ('Disp 3!', [6]),
 ])
 def test_arithmetic(expr, expected):
-    # NOTE: operand/result magnitudes here are deliberately chosen to avoid
-    # a known decimal-precision bug in FloatOperator.run (see
-    # test_known_bugs.py::test_small_operand_multiplication_loses_precision).
     assert disp_of(expr) == expected
 
 

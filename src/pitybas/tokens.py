@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import datetime
-import decimal
 import math
 import random
 import string
@@ -466,12 +465,6 @@ class Operator(Token, Stub):
 class FloatOperator(Operator, Stub):
     @get
     def run(self, vm, left, right):
-        # TODO: be smarter about when to coerce to float
-        if isinstance(left, int) or isinstance(right, int):
-            decimal.getcontext().prec = max(len(str(left)), len(str(right)))
-            left = decimal.Decimal(left)
-            right = decimal.Decimal(right)
-
         ans = self.op(left, right)
         # 14 digits of precision?
         if abs(ans - int(ans)) < 0.00000000000001:
@@ -1277,7 +1270,6 @@ class Prompt(Token):
         return 'Prompt(%s)' % repr(self.arg)
 
 class Input(Token):
-    # TODO: how is string input handled on calc? been too long
     absorbs = (Expression, Variable, Tuple)
 
     def run(self, vm):
@@ -1293,7 +1285,10 @@ class Input(Token):
             raise ExecutionError('Input used with wrong number of arguments')
 
     def prompt(self, vm, var, msg='?'):
-        if isinstance(var, Str):
+        if isinstance(var, Expression):
+            var = var.flatten()
+
+        if isinstance(var, StrVar):
             is_str = True
         else:
             is_str = False

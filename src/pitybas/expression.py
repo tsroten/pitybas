@@ -153,7 +153,7 @@ class Base:
                     order[p] = [i]
 
         ret = []
-        for p in order:
+        for p in sorted(order):
             ret += order[p]
 
         return ret

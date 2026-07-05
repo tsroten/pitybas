@@ -37,12 +37,7 @@ def test_prompt_multiple_variables():
 
 
 def test_input_with_message_string_variable():
-    # NOTE: Str0..Str9 are instances of StrVar, not the (dead) Str class
-    # that Input.prompt() checks with isinstance(var, Str) to decide
-    # whether to treat the input as a raw string. So this always parses
-    # the typed input as an expression, meaning the user has to quote
-    # it themselves. See test_known_bugs.py for a characterization test.
-    vm = run('Input "name?", Str0\nDisp Str0', inputs=['"bob"'])
+    vm = run('Input "name?", Str0\nDisp Str0', inputs=['bob'])
     assert vm.io.disps == ['bob']
 
 
@@ -57,9 +52,6 @@ def test_pause_displays_message():
 
 
 def test_fixed_precision_rounds_display():
-    # NOTE: uses a literal rather than a Mult/Div expression; the latter
-    # leaves the global decimal context precision clamped to 1 digit
-    # (see test_known_bugs.py), which makes round() raise afterwards.
     vm = run('Fix 2\nDisp 3.14159')
     assert vm.io.disps == [3.14]
 
