@@ -2,7 +2,7 @@
 
 ## 0.1.0 (unreleased)
 
-Initial release.
+Initial release. pitybas was originally written by [Ryan Hileman](https://github.com/lunixbochs).
 
 ### Added
 - TI-BASIC interpreter supporting core language features: variables, arithmetic, control flow (`If`/`Then`/`Else`, `For`, `While`, `Repeat`, `Goto`/`Lbl`), lists, matrices, strings, and math functions
