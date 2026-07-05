@@ -183,14 +183,6 @@ class EOF(Token, Stub):
         raise StopError
 
 class Const(Variable, Stub):
-    def __init__(self, value):
-        super(Const, self).__init__()
-        self.value = value
-
-    def get(self, vm):
-        return self.value
-
-class Const(Variable, Stub):
     value = None
 
     def set(self, vm, value): raise InvalidOperation
@@ -600,13 +592,6 @@ class gcd(Function):
         else:
             return math.gcd(*args)
 
-    # TODO: list support
-    @staticmethod
-    def gcd(a, b):
-        while b:
-            a, b = b, (a % b)
-        return a
-
 class lcm(Function):
     def call(self, vm, args):
         assert len(args) == 2
@@ -614,12 +599,12 @@ class lcm(Function):
         if isinstance(a, list):
             a = self.lcm_list(*a)
         if isinstance(b, list):
-            a = self.lcm_list(*b)
+            b = self.lcm_list(*b)
         return self.lcm(a, b)
 
     @staticmethod
     def lcm(a, b):
-        return a * b // gcd.gcd(a, b)
+        return a * b // math.gcd(a, b)
 
     @classmethod
     def lcm_list(cls, *args):
@@ -762,7 +747,7 @@ class nCr(Operator):
     priority = Pri.PROB
 
     def op(self, left, right):
-        return math.fact(left) / (math.fact(right) * math.fact((left - right)))
+        return math.factorial(left) // (math.factorial(right) * math.factorial((left - right)))
 
 class Factorial(Exponent):
     token = '!'
@@ -1140,7 +1125,7 @@ class Menu(Function):
         if l >= 3 and (l - 3) % 2 == 0:
             title = args.pop(0)
 
-            menu = (title, zip(args[::2], args[1::2])),
+            menu = (title, list(zip(args[::2], args[1::2]))),
 
             label = vm.io.menu(menu)
             Goto.goto(vm, label)
@@ -1367,4 +1352,5 @@ class dayOfWk(Function):
 class ReadFile(Function):
     def call(self, vm, args):
         assert len(args) == 1
-        return open(args[0], 'r').read()
+        with open(args[0], 'r') as f:
+            return f.read()
