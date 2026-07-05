@@ -57,6 +57,11 @@ def test_dim_set_for_list_pads_with_zeros():
     assert vm.io.disps == [[1, 0, 0]]
 
 
+def test_list_store_beyond_length_pads_with_zeros():
+    vm = run('{1,2}->l1\n5->l1(5)\nDisp l1')
+    assert vm.io.disps == [[1, 2, 0, 0, 5]]
+
+
 def test_matrix_store_and_index():
     # Disp formats matrices as strings (see tokens.Disp.format_matrix)
     vm = run('[[1,2,3,4]]->[A]\nDisp [A]\n2->[A](1,1)\nDisp [A]')

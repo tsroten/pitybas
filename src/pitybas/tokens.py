@@ -238,10 +238,12 @@ class List(Variable, Stub):
             l = vm.get_list(self.name)
             i = arg - 1
 
-            if i == len(l):
-                l.append(value)
-            else:
-                l[i] = value
+            # real hardware auto-pads a list with 0s when storing beyond
+            # its current dimension; only an in-bounds index is a plain
+            # replace
+            if i >= len(l):
+                l += [0] * (i - len(l) + 1)
+            l[i] = value
             vm.set_list(self.name, l)
         else:
             assert isinstance(value, list)
