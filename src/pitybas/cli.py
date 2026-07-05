@@ -39,7 +39,7 @@ def main(argv=None):
             print('-===[ Running %s ]===-' % args[0])
 
     if options.ast:
-        print_ast(vm)
+        vm.print_ast()
         sys.exit(0)
 
     try:
