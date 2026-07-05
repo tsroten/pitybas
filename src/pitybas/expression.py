@@ -287,6 +287,19 @@ class MatrixExpr(Arguments):
     priority = Pri.NONE
     end = ']'
 
+    def append(self, expr):
+        # Real hardware writes adjacent matrix literal rows with no
+        # separator, e.g. "[[1,2][3,4]]" -- each row parses as its own
+        # MatrixExpr. Without this, the inherited Tuple.append() would
+        # merge a new row into the same wrapping Expression as the
+        # previous one (since nothing ever called .finish() on it),
+        # triggering bogus implied multiplication between the two rows
+        # instead of starting a new one.
+        if isinstance(expr, MatrixExpr) and self.contents:
+            self.sep()
+
+        super().append(expr)
+
     def __repr__(self):
         return 'M[%s]' % (', '.join(repr(expr) for expr in self.contents))
 
