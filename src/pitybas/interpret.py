@@ -210,7 +210,7 @@ class Interpreter(object):
 
         for i in range(max(start, 0), min(end, len(self.code))):
             line = self.code[i]
-            if i == highlight - 1:
+            if highlight is not None and i == highlight - 1:
                 print('>>>> {}'.format(line))
             else:
                 print('{:3}: {}'.format(i, line))

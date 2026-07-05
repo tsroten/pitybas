@@ -1,4 +1,8 @@
-from pitybas.common import is_number
+from pitybas.common import Error, is_number
+
+
+def test_error_str_returns_msg():
+    assert str(Error('something broke')) == 'something broke'
 
 
 def test_is_number_accepts_integers():
