@@ -2,8 +2,6 @@ pitybas
 =======
 A working TI-BASIC interpreter, written in Python.
 
-Currently, all `.bas` files in tests/ run except circle.bas (due to lack of graph screen functions)
-
 ## Installation
 
     pip install pitybas
@@ -27,6 +25,10 @@ If you run `pb` with no filename, it launches an interactive shell.
 You can also run it as a module without installing the console script:
 
     python -m pitybas -i vt100
+
+## Known Limitations
+
+- **Graph screen functions are not supported.** Commands that draw to the TI-83/84 graph screen (e.g. `Circle`, `Line`, `DrawF`) are not implemented. Programs that use them will fail or produce no output.
 
 ## Development
 
