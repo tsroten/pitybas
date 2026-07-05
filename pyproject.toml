@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pitybas"
+dynamic = ["version"]
+description = "A TI-BASIC interpreter written in Python"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Ryan Hileman" },
+]
+maintainers = [
+    { name = "Thomas Roten", email = "tsr@thomasroten.com" },
+]
+requires-python = ">=3.9"
+keywords = ["ti-basic", "interpreter", "calculator", "ti-83", "ti-84"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Interpreters",
+]
+
+[project.urls]
+Homepage = "https://github.com/tsroten/pitybas"
+Repository = "https://github.com/tsroten/pitybas"
+Issues = "https://github.com/tsroten/pitybas/issues"
+
+[project.scripts]
+pb = "pitybas.cli:main"
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools.dynamic]
+version = { attr = "pitybas.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
