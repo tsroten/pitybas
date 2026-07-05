@@ -91,18 +91,9 @@ def test_pause_without_message_only_waits_for_enter(io_obj, monkeypatch, capsys)
 
 
 def test_menu_returns_label_for_valid_choice(io_obj, monkeypatch, capsys):
-    class Title:
-        def get(self, vm):
-            return 'pick one'
-
-    class Entry:
-        def __init__(self, text):
-            self.text = text
-
-        def get(self, vm):
-            return self.text
-
-    menu = ((Title(), [(Entry('first'), 'LBL1'), (Entry('second'), 'LBL2')]),)
+    # title/desc arrive as plain, already-evaluated display strings (see
+    # tokens.Menu.run); only the label stays a raw token/value for Goto.
+    menu = (('pick one', [('first', 'LBL1'), ('second', 'LBL2')]),)
 
     monkeypatch.setattr('builtins.input', lambda: '2')
 
@@ -111,18 +102,7 @@ def test_menu_returns_label_for_valid_choice(io_obj, monkeypatch, capsys):
 
 
 def test_menu_reprompts_on_invalid_choice(io_obj, monkeypatch, capsys):
-    class Title:
-        def get(self, vm):
-            return 't'
-
-    class Entry:
-        def __init__(self, text):
-            self.text = text
-
-        def get(self, vm):
-            return self.text
-
-    menu = ((Title(), [(Entry('only'), 'LBL')]),)
+    menu = (('t', [('only', 'LBL')]),)
 
     responses = iter(['nope', '99', '1'])
     monkeypatch.setattr('builtins.input', lambda: next(responses))

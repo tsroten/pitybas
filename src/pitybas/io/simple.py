@@ -50,15 +50,17 @@ class IO:
         self.input('[press enter]', True)
 
     def menu(self, menu):
-        # menu is a tuple of (title, (desc, label)),
+        # menu is a tuple of (title, [(desc, label)]) -- title/desc are
+        # already-evaluated display strings; label is a raw, unevaluated
+        # token for Goto to resolve.
         lookup = []
         while True:
             i = 1
 
             for title, entries in menu:
-                print('-[ %s ]-' % self.vm.get(title))
+                print('-[ %s ]-' % title)
                 for name, label in entries:
-                    print('%i: %s' % (i, self.vm.get(name)))
+                    print('%i: %s' % (i, name))
                     lookup.append(label)
                     i += 1
 

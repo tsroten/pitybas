@@ -1148,8 +1148,16 @@ class Menu(Function):
         l = len(args)
         if l >= 3 and (l - 3) % 2 == 0:
             title = args.pop(0)
+            descs = args[::2]
+            labels = args[1::2]
 
-            menu = (title, list(zip(args[::2], args[1::2]))),
+            # Title/description text is evaluated up front so IO.menu()
+            # backends receive plain display strings, matching what a real
+            # Menu( shows on-screen. Each label is left as a raw,
+            # unevaluated token: Goto.goto() (via Lbl.guess_label) needs
+            # its parse-tree shape, not a plain value, to resolve the jump
+            # target.
+            menu = (vm.get(title), list(zip(vm.get(*descs), labels))),
 
             label = vm.io.menu(menu)
             Goto.goto(vm, label)
