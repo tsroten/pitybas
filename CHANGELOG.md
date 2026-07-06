@@ -4,6 +4,7 @@
 
 ### Added
 - Added `IS>(` and `DS<(`, the increment/decrement-and-skip loop-control commands
+- Added `Archive`/`Unarchive` as stubs (no-ops, since there's no separate archive memory in this interpreter)
 
 ### Fixed
 - Lists can now be specified with an uppercase `L` (e.g. `L1`), matching the lowercase `l` and `∟` glyph forms already supported

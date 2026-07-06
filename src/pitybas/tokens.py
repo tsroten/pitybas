@@ -490,6 +490,15 @@ class DelVar(Token):
         else:
             vm.vars.pop(arg.token, None)
 
+class Archive(Token):
+    absorbs = (Expression, Variable)
+
+    def run(self, vm):
+        pass
+
+class Unarchive(Archive):
+    pass
+
 # operators
 
 class Stor(Token):
