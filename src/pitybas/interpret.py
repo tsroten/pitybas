@@ -44,6 +44,7 @@ class Interpreter(object):
         self.lists = defaultdict(list)
         self.matrix = {}
         self.fixed = -1
+        self.degree_mode = False
 
         self.serial = 0
         self.repl_serial = 0

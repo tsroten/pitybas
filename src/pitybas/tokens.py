@@ -853,29 +853,62 @@ class expr(MathExprFunction):
 # trig
 
 class sin(MathExprFunction):
-    def call(self, vm, arg): return math.sin(arg)
+    def call(self, vm, arg):
+        if vm.degree_mode: arg = math.radians(arg)
+        return math.sin(arg)
 
 class cos(MathExprFunction):
-    def call(self, vm, arg): return math.cos(arg)
+    def call(self, vm, arg):
+        if vm.degree_mode: arg = math.radians(arg)
+        return math.cos(arg)
 
 class tan(MathExprFunction):
-    def call(self, vm, arg): return math.tan(arg)
+    def call(self, vm, arg):
+        if vm.degree_mode: arg = math.radians(arg)
+        return math.tan(arg)
 
 # TODO: subclass these inverse functions with the unicode -1 token, and probably add support for that in the parser for ints too
 class asin(MathExprFunction):
     token = 'sin-1'
 
-    def call(self, vm, arg): return math.asin(arg)
+    def call(self, vm, arg):
+        result = math.asin(arg)
+        return math.degrees(result) if vm.degree_mode else result
 
 class acos(MathExprFunction):
     token = 'cos-1'
 
-    def call(self, vm, arg): return math.acos(arg)
+    def call(self, vm, arg):
+        result = math.acos(arg)
+        return math.degrees(result) if vm.degree_mode else result
 
 class atan(MathExprFunction):
     token = 'tan-1'
 
-    def call(self, vm, arg): return math.atan(arg)
+    def call(self, vm, arg):
+        result = math.atan(arg)
+        return math.degrees(result) if vm.degree_mode else result
+
+# angle mode
+
+class DegreeSymbol(RightExponent):
+    # postfix °: treats its operand as degrees regardless of the current
+    # angle mode, converting to radians only if we're in Radian mode
+    # (in Degree mode it's a no-op since raw numbers are already degrees)
+    token = u'\xb0'
+
+    def run(self, vm, left, right):
+        value = vm.get(left)
+        return value if vm.degree_mode else math.radians(value)
+
+class RadianSymbol(RightExponent):
+    # postfix r: the mirror image of ° - treats its operand as radians
+    # regardless of the current angle mode
+    token = 'r'
+
+    def run(self, vm, left, right):
+        value = vm.get(left)
+        return math.degrees(value) if vm.degree_mode else value
 
 class sinh(MathExprFunction):
     def call(self, vm, arg): return math.sinh(arg)
@@ -887,17 +920,17 @@ class tanh(MathExprFunction):
     def call(self, vm, arg): return math.tanh(arg)
 
 class asinh(MathExprFunction):
-    token = 'sin-1'
+    token = 'sinh-1'
 
     def call(self, vm, arg): return math.asinh(arg)
 
 class acosh(MathExprFunction):
-    token = 'cos-1'
+    token = 'cosh-1'
 
     def call(self, vm, arg): return math.acosh(arg)
 
 class atanh(MathExprFunction):
-    token = 'tan-1'
+    token = 'tanh-1'
 
     def call(self, vm, arg): return math.atanh(arg)
 
@@ -1375,6 +1408,14 @@ class Return(Token):
 class ClrHome(Token):
     def run(self, vm):
         vm.io.clear()
+
+class Radian(Token):
+    def run(self, vm):
+        vm.degree_mode = False
+
+class Degree(Token):
+    def run(self, vm):
+        vm.degree_mode = True
 
 class Float(Token):
     def run(self, vm):

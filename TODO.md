@@ -1,8 +1,18 @@
 # TODO
  
-## Behavioral gaps (likely to cause silent wrong results)
+## Angle and complex-number related gaps (missing tokens/features)
 
-Trig mode (Degree/Radian) — pitybas always uses radians. Any program doing angle math in degrees (common in physics/geometry games) will produce wrong results with no error.
+DMS (degrees-minutes-seconds) notation — TI-BASIC allows angle literals like
+30°15'20" and a ►DMS conversion. pitybas doesn't tokenize the ' (minutes)
+symbol, and the " (seconds) symbol would collide with pitybas's existing
+string-quote token, so any program using DMS literals fails to parse.
+
+Polar/rectangular conversions — R►Pr(, R►Pθ(, P►Rx(, P►Ry(, and Angle( are
+angle-mode-dependent TI-BASIC functions with no equivalent in pitybas at all.
+
+►Polar / re^θi complex display mode — depends on complex-number support (a
+literal `i` token, complex arithmetic) that pitybas doesn't really have;
+Angle( and ►Polar on complex numbers would need that foundation first.
 
 ## Runtime behavior
 

@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 from conftest import run
@@ -53,6 +55,55 @@ def test_tostring_rejects_string_argument():
 
     with pytest.raises(ExecutionError, match='ERR:DATA TYPE'):
         disp_of('Disp toString("hi")')
+
+
+def test_trig_functions_default_to_radian_mode():
+    assert disp_of('Disp sin(0)') == [0]
+    assert disp_of('Radian\nDisp sin(0)') == [0]
+
+
+@pytest.mark.parametrize('expr,expected', [
+    ('Degree\nDisp sin(90)', 1),
+    ('Degree\nDisp cos(180)', -1),
+    ('Degree\nDisp tan(45)', 1),
+])
+def test_trig_functions_respect_degree_mode(expr, expected):
+    assert disp_of(expr)[0] == pytest.approx(expected)
+
+
+@pytest.mark.parametrize('expr,expected', [
+    ('Degree\nDisp sin-1(1)', 90),
+    ('Degree\nDisp cos-1(-1)', 180),
+    ('Degree\nDisp tan-1(1)', 45),
+])
+def test_inverse_trig_functions_respect_degree_mode(expr, expected):
+    assert disp_of(expr)[0] == pytest.approx(expected)
+
+
+def test_hyperbolic_trig_is_unaffected_by_degree_mode():
+    # sinh/cosh/tanh have no notion of an angle, so Degree mode must not
+    # touch them - unlike sin/cos/tan they always work on plain reals.
+    assert disp_of('Degree\nDisp sinh(0)') == [0]
+    assert disp_of('Degree\nDisp cosh(0)') == [1]
+
+
+def test_inverse_hyperbolic_trig_tokens_are_not_shadowed_by_inverse_trig():
+    # sinh-1(/cosh-1(/tanh-1( used to share a token string with
+    # sin-1(/cos-1(/tan-1(, so the hyperbolic variants silently won and
+    # asin/acos/atan were unreachable.
+    assert disp_of('Disp sinh-1(0)') == [0]
+    assert disp_of('Disp sin-1(0)') == [0]
+
+
+def test_degree_symbol_forces_degrees_regardless_of_mode():
+    expected = math.sin(math.radians(45))
+    assert disp_of('Disp sin(45\xb0)')[0] == pytest.approx(expected)
+    assert disp_of('Degree\nDisp sin(45\xb0)')[0] == pytest.approx(expected)
+
+
+def test_radian_symbol_forces_radians_regardless_of_mode():
+    assert disp_of('Degree\nDisp sin((3.14159265358979/2)r)')[0] == pytest.approx(1)
+    assert disp_of('Disp sin((3.14159265358979/2)r)')[0] == pytest.approx(1)
 
 
 @pytest.mark.parametrize('expr,expected', [
