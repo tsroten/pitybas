@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.1 (2026-07-06)
 
 ### Fixed
 - Lists can now be specified using Unicode subscript digits (e.g. `L₁`), the standard TI-84 plaintext representation of the default list names; `L₁` is treated as identical to `L1` and `l1`
