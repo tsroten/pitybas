@@ -31,6 +31,24 @@ def test_string_concatenation():
 
 
 @pytest.mark.parametrize('expr,expected', [
+    ('Disp toString(5)', ['5']),
+    ('Disp toString(-2)', ['-2']),
+    ('Disp toString(3.14)', ['3.14']),
+    ('Disp toString(5.0)', ['5']),
+])
+def test_tostring(expr, expected):
+    assert disp_of(expr) == expected
+
+
+def test_tostring_concatenated_into_a_display_string():
+    assert disp_of('Disp "X="+toString(5)') == ['X=5']
+
+
+def test_tostring_respects_fix_mode():
+    assert disp_of('Fix 2\nDisp toString(3.14159)') == ['3.14']
+
+
+@pytest.mark.parametrize('expr,expected', [
     ('Disp 1<2', [1]),
     ('Disp 2<1', [0]),
     ('Disp 1=1', [1]),

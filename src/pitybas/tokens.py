@@ -1064,6 +1064,10 @@ class length(Function):
         assert len(args) == 1
         return len(args[0])
 
+class toString(MathExprFunction):
+    def call(self, vm, arg):
+        return str(vm.disp_round(arg))
+
 # control flow
 
 class Block(StubToken):
