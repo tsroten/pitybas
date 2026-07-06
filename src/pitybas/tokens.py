@@ -654,6 +654,12 @@ class Negate(Token):
     token = u'⁻'
     priority = Pri.NONE
 
+class NegateTilde(Negate):
+    """'~' is the plaintext ASCII rendering of the same negation key used
+    when a .8xp program is dumped to text (ASCII has no raised-minus glyph),
+    so it must behave identically to '⁻' rather than being left unhandled."""
+    token = '~'
+
 class Mult(MultDiv):
     token = '*'
 

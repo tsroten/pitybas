@@ -1,10 +1,5 @@
 # TODO
  
-## Behavioral gaps (likely to cause silent wrong results)
-
-Tilde (~) encodes as a negation token in .8xp, but pitybas is missing a token
-for this.
-
 ## Angle and complex-number related gaps (missing tokens/features)
 
 DMS (degrees-minutes-seconds) notation — TI-BASIC allows angle literals like
