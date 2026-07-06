@@ -178,6 +178,9 @@ class VT:
             if ch == '\003':
                 raise KeyboardInterrupt
 
+            if ch in ('\r', '\n'):
+                return 'enter'
+
             if ch == '\033':
                 # control sequence
                 ch = sys.stdin.read(1)
