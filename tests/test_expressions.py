@@ -48,6 +48,13 @@ def test_tostring_respects_fix_mode():
     assert disp_of('Fix 2\nDisp toString(3.14159)') == ['3.14']
 
 
+def test_tostring_rejects_string_argument():
+    from pitybas.common import ExecutionError
+
+    with pytest.raises(ExecutionError, match='ERR:DATA TYPE'):
+        disp_of('Disp toString("hi")')
+
+
 @pytest.mark.parametrize('expr,expected', [
     ('Disp 1<2', [1]),
     ('Disp 2<1', [0]),

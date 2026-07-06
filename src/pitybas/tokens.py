@@ -1066,6 +1066,8 @@ class length(Function):
 
 class toString(MathExprFunction):
     def call(self, vm, arg):
+        if isinstance(arg, str):
+            raise ExecutionError('ERR:DATA TYPE')
         return str(vm.disp_round(arg))
 
 # control flow
