@@ -67,8 +67,18 @@ of the digit, and `Goto M2`/`Goto M3` both resolved to whichever `Lbl
 M<n>` appeared first in the source. Fixed by reconstructing the label
 from each part's real value (`Variable.token` / `Value.value`) instead of
 relying on the generic `.token` placeholder.
+
+Bug 10 (fixed): VT.getch (pitybas/io/vt100.py) translated escape
+sequences (arrow keys) into the name strings ('up', 'down', ...) that
+the `keycodes` dict is keyed by, but returned the raw '\r' byte for
+Enter instead of translating it to 'enter'. IO.getkey() looks up
+`keycodes[key]`, so pressing Enter always missed the dict and getkey()
+returned 0 no matter how many times it was pressed. Fixed by having
+getch() translate '\r'/'\n' to the string 'enter' before returning, the
+same way arrow keys are translated.
 """
 import io as std_io
+import types
 
 import pytest
 
@@ -158,3 +168,22 @@ def test_goto_letter_digit_label_reaches_matching_label():
         'Lbl M3\nDisp "three"'
     )
     assert vm.io.disps == ['two', 'three']
+
+
+def test_getkey_returns_enter_keycode_for_carriage_return(monkeypatch):
+    """Reproduces bug 10: pressing Enter in raw tty mode sends '\\r', which
+    must be translated to the 'enter' string (as arrow keys are translated
+    to 'up'/'down'/etc.) so it can be found in the keycodes dict."""
+    from pitybas.interpret import Interpreter
+    from pitybas.io import vt100
+
+    monkeypatch.setattr(vt100.termios, 'tcgetattr', lambda fd: None)
+    monkeypatch.setattr(vt100.termios, 'tcsetattr', lambda fd, when, attrs: None)
+    monkeypatch.setattr(vt100.tty, 'setraw', lambda fd: None)
+    monkeypatch.setattr(vt100.select, 'select', lambda r, w, x, timeout: (r, [], []))
+    monkeypatch.setattr(vt100.sys, 'stdin', types.SimpleNamespace(
+        fileno=lambda: 0, read=lambda n: '\r',
+    ))
+
+    io = vt100.IO(Interpreter.from_string(''))
+    assert io.getkey() == 105
