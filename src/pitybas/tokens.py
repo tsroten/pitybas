@@ -1195,7 +1195,7 @@ class Goto(Token):
         raise ExecutionError('could not find a label to Goto: %s' % token)
 
 class IsGreaterThanSkip(Function):
-    token = 'Is>'
+    token = 'IS>'
 
     def run(self, vm):
         assert self.arg and len(self.arg) == 2
@@ -1208,7 +1208,7 @@ class IsGreaterThanSkip(Function):
             vm.inc_row()
 
 class DsLessThanSkip(Function):
-    token = 'Ds<'
+    token = 'DS<'
 
     def run(self, vm):
         assert self.arg and len(self.arg) == 2

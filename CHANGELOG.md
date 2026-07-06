@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Added
-- Added `Is>(` and `Ds<(`, the increment/decrement-and-skip loop-control commands
+- Added `IS>(` and `DS<(`, the increment/decrement-and-skip loop-control commands
 
 ### Fixed
 - Lists can now be specified with an uppercase `L` (e.g. `L1`), matching the lowercase `l` and `∟` glyph forms already supported
