@@ -21,6 +21,7 @@ If you run `pb` with no filename, it launches an interactive shell.
         -s, --stacktrace  always stacktrace
         -v, --verbose     verbose output
         -i IO, --io=IO    select an IO system: simple (default), vt100
+        -x, --strict      raise ERR:UNDEFINED instead of silently defaulting unset variables to 0
 
 You can also run it as a module without installing the console script:
 

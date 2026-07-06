@@ -15,6 +15,3 @@ toString( — TI-84+ only, converts a number to its string representation. Neede
 
 getKey in the simple backend — Core to every game loop in the document. Raising NotImplementedError means the default backend can't run any real-time program at all. Even returning 0
 unconditionally would be better than crashing.
-
-Undefined variable defaulting to 0 — On a real calculator, reading an unset variable raises ERR:UNDEFINED. pitybas returns 0 silently. This masks bugs: a program with a typo in a variable
-name will silently compute wrong values instead of failing visibly. An optional strict mode would help during development.
