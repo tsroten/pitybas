@@ -24,7 +24,7 @@ class Interpreter(object):
         vm.name = os.path.basename(filename)
         return vm
 
-    def __init__(self, code, history=10, io=None, name=None):
+    def __init__(self, code, history=10, io=None, name=None, strict=False):
         if not io: io = IO
         self.io = io(self)
 
@@ -38,6 +38,7 @@ class Interpreter(object):
         self.running = []
         self.history = []
         self.hist_len = history
+        self.strict = strict
 
         self.vars = {}
         self.lists = defaultdict(list)
@@ -64,8 +65,11 @@ class Interpreter(object):
         return self.cur()
 
     def get_var(self, var, default=None):
-        if var not in self.vars and default is not None:
-            return default
+        if var not in self.vars:
+            if self.strict:
+                raise ExecutionError('ERR:UNDEFINED')
+            if default is not None:
+                return default
         return self.vars[var]
 
     def set_var(self, var, value):

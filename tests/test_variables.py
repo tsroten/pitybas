@@ -1,4 +1,7 @@
+import pytest
+
 from conftest import run
+from pitybas.common import ExecutionError
 
 
 def test_simple_variable_store_and_get():
@@ -10,6 +13,16 @@ def test_simple_variable_store_and_get():
 def test_variable_defaults_to_zero():
     vm = run('Disp A')
     assert vm.io.disps == [0]
+
+
+def test_strict_mode_raises_on_undefined_variable():
+    with pytest.raises(ExecutionError, match='ERR:UNDEFINED'):
+        run('Disp A', strict=True)
+
+
+def test_strict_mode_allows_defined_variable():
+    vm = run('5->A\nDisp A', strict=True)
+    assert vm.io.disps == [5]
 
 
 def test_chained_store():

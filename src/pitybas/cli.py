@@ -14,6 +14,8 @@ def main(argv=None):
     parser.add_option('-s', '--stacktrace', dest="stacktrace", action="store_true", help="always stacktrace")
     parser.add_option('-v', '--verbose', dest="verbose", action="store_true", help="verbose output")
     parser.add_option('-i', '--io', dest="io", help="select an IO system: simple (default), vt100")
+    parser.add_option('-x', '--strict', dest="strict", action="store_true", default=False,
+                       help="raise ERR:UNDEFINED instead of silently defaulting unset variables to 0")
 
     (options, args) = parser.parse_args(argv)
 
@@ -26,11 +28,11 @@ def main(argv=None):
         io = vt100
 
     if args:
-        vm = Interpreter.from_file(args[0], history=20, io=io)
+        vm = Interpreter.from_file(args[0], history=20, io=io, strict=options.strict)
     else:
         print('Welcome to pitybas. Press Ctrl-D to exit.')
         print()
-        vm = Repl(history=20, io=io)
+        vm = Repl(history=20, io=io, strict=options.strict)
 
     if options.verbose:
         vm.print_tokens()
