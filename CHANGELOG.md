@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Added the TI-84's RTC-backed date/time commands: `getDate`/`getTime` (read the current date/time), `setDate(`/`setTime(` (set it), `getDtFmt`/`setDtFmt(`/`getTmFmt`/`setTmFmt(` (date/time display format settings), `getDtStr(`/`getTmStr(` (formatted date/time strings), `startTmr`/`checkTmr(` (elapsed-time timer), and `timeCnv(` (seconds to `{days,hours,minutes,seconds}`)
+
 ## 0.4.1 (2026-07-06)
 
 ### Fixed

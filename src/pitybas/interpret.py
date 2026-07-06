@@ -1,4 +1,5 @@
 from collections import defaultdict
+import datetime
 import decimal
 import os
 import time
@@ -45,6 +46,13 @@ class Interpreter(object):
         self.matrix = {}
         self.fixed = -1
         self.degree_mode = False
+
+        # date/time clock: real wall-clock time offset by this amount, so
+        # setDate(/setTime( can rewrite the "current" date/time without
+        # touching the host system clock
+        self.clock_offset = datetime.timedelta()
+        self.date_fmt = 1
+        self.time_fmt = 12
 
         self.serial = 0
         self.repl_serial = 0
