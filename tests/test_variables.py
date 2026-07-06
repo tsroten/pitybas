@@ -65,6 +65,21 @@ def test_uppercase_l_list_and_lowercase_l_list_are_the_same_list():
     assert vm.io.disps == [[1, 2, 3]]
 
 
+def test_list_subscript_digit_store_and_get():
+    vm = run('{1,2,3}->L₁\nDisp L₁\n5->L₁(1)\nDisp L₁')
+    assert vm.io.disps == [[1, 2, 3], [5, 2, 3]]
+
+
+def test_list_subscript_digit_same_as_plain_digit():
+    vm = run('{1,2,3}->L₁\nDisp L1\nDisp l1')
+    assert vm.io.disps == [[1, 2, 3], [1, 2, 3]]
+
+
+def test_list_subscript_digits_0_through_9():
+    vm = run('{10}->L₀\n{11}->L₁\n{16}->L₆\n{19}->L₉\nDisp L₀\nDisp L₁\nDisp L₆\nDisp L₉')
+    assert vm.io.disps == [[10], [11], [16], [19]]
+
+
 def test_list_copy_is_independent():
     vm = run('{1}->l1\nl1->l2\n2->l2(1)\nDisp l1\nDisp l2')
     assert vm.io.disps == [[1], [2]]

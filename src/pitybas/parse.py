@@ -4,6 +4,9 @@ from .common import ParseError, is_number
 from .expression import Expression, Bracketed, FunctionArgs, Tuple, ParenExpr, ListExpr, MatrixExpr
 from .expression import Base as BaseExpression
 
+_SUBSCRIPT_DIGITS = '₀₁₂₃₄₅₆₇₈₉'
+_SUBSCRIPT_TRANS = str.maketrans('₀₁₂₃₄₅₆₇₈₉', '0123456789')
+
 class Parser:
     LOOKUP = {}
     LOOKUP.update(tokens.Token.tokens)
@@ -202,7 +205,7 @@ class Parser:
             elif '0' <= char <= '9' or char == '.'\
                     or isinstance(self.token(sub=True, inc=False), tokens.Minus) and self.number(test=True):
                 result = tokens.Value(self.number())
-            elif char in u'lL∟' and self.more(self.pos+1) and self.source[self.pos+1] in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789':
+            elif char in u'lL∟' and self.more(self.pos+1) and self.source[self.pos+1] in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' + _SUBSCRIPT_DIGITS:
                 result = self.list()
             elif char.isalpha():
                 result = self.token()
@@ -370,8 +373,8 @@ class Parser:
 
     def list(self):
         self.inc()
-        name = self.all()
-
+        name = self.all(match='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' + _SUBSCRIPT_DIGITS)
+        name = name.translate(_SUBSCRIPT_TRANS)
         return tokens.List(name)
 
     def matrix(self):
