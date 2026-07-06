@@ -508,15 +508,20 @@ class Operator(Token, Stub):
     def run(self, vm, left, right):
         return self.op(left, right)
 
+def round_precision(ans):
+    # 14 digits of precision?
+    if isinstance(ans, list):
+        return [round_precision(a) for a in ans]
+
+    if abs(ans - int(ans)) < 0.00000000000001:
+        return int(ans)
+
+    return ans
+
 class FloatOperator(Operator, Stub):
     @get
     def run(self, vm, left, right):
-        ans = self.op(left, right)
-        # 14 digits of precision?
-        if abs(ans - int(ans)) < 0.00000000000001:
-            ans = int(ans)
-
-        return ans
+        return round_precision(self.op(left, right))
 
 class AddSub(Operator, Stub): priority = Pri.ADDSUB
 class MultDiv(FloatOperator, Stub): priority = Pri.MULTDIV
@@ -543,17 +548,61 @@ class Logic(Bool): priority = Pri.LOGIC
 
 # math
 
+def is_matrix(value):
+    return isinstance(value, list) and value and isinstance(value[0], list)
+
+def is_list(value):
+    return isinstance(value, list) and not is_matrix(value)
+
+def elementwise(op, left, right):
+    """Apply a scalar binary op across List/Matrix operands the way real
+    TI-BASIC does: same-shape List/List or Matrix/Matrix pairs combine
+    element by element, and a scalar broadcasts against every element of
+    a List or Matrix."""
+    if isinstance(left, list) and isinstance(right, list):
+        if is_matrix(left) and is_matrix(right):
+            if len(left) != len(right) or len(left[0]) != len(right[0]):
+                raise ExecutionError('ERR:DIM MISMATCH')
+            return [[op(a, b) for a, b in zip(ra, rb)] for ra, rb in zip(left, right)]
+        elif is_list(left) and is_list(right):
+            if len(left) != len(right):
+                raise ExecutionError('ERR:DIM MISMATCH')
+            return [op(a, b) for a, b in zip(left, right)]
+        else:
+            raise ExecutionError('ERR:DATA TYPE')
+    elif isinstance(left, list):
+        if is_matrix(left):
+            return [[op(a, right) for a in row] for row in left]
+        return [op(a, right) for a in left]
+    elif isinstance(right, list):
+        if is_matrix(right):
+            return [[op(left, b) for b in row] for row in right]
+        return [op(left, b) for b in right]
+    else:
+        return op(left, right)
+
+def matrix_multiply(left, right):
+    rows, mid = len(left), len(left[0])
+    mid_b, cols = len(right), len(right[0])
+    if mid != mid_b:
+        raise ExecutionError('ERR:DIM MISMATCH')
+
+    return [
+        [sum(left[i][k] * right[k][j] for k in range(mid)) for j in range(cols)]
+        for i in range(rows)
+    ]
+
 class Plus(AddSub):
     token = '+'
 
     def op(self, left, right):
-        return left + right
+        return elementwise(lambda a, b: a + b, left, right)
 
 class Minus(AddSub):
     token = '-'
 
     def op(self, left, right):
-        return left - right
+        return elementwise(lambda a, b: a - b, left, right)
 
 class Negate(Token):
     """The real calculator's dedicated negation key (raised minus),
@@ -568,13 +617,21 @@ class Mult(MultDiv):
     token = '*'
 
     def op(self, left, right):
-        return left * right
+        # real matrix multiplication, not element-wise, when both sides
+        # are matrices; List*List and any scalar broadcast stay element-wise
+        if is_matrix(left) and is_matrix(right):
+            return matrix_multiply(left, right)
+
+        return elementwise(lambda a, b: a * b, left, right)
 
 class Div(MultDiv):
     token = '/'
 
     def op(self, left, right):
-        return left / right
+        if is_matrix(left) and is_matrix(right):
+            raise ExecutionError('ERR:DATA TYPE')
+
+        return elementwise(lambda a, b: a / b, left, right)
 
 class Pow(Exponent):
     token = '^'
