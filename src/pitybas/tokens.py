@@ -3,6 +3,7 @@ import datetime
 import math
 import random
 import string
+import time
 from functools import reduce
 
 from .common import Pri, ExecutionError, StopError, ReturnError
@@ -1637,13 +1638,115 @@ class REPL(Token):
 
         vm.line, vm.col = self.line, self.col
 
-# date commands
+# date/time commands
+
+def _now(vm):
+    return datetime.datetime.now() + vm.clock_offset
 
 class dayOfWk(Function):
     def call(self, vm, args):
         assert len(args) == 3
         date = datetime.datetime(year=args[0], month=args[1], day=args[2])
         return date.isoweekday() % 7 + 1
+
+class getDate(Variable):
+    def get(self, vm):
+        now = _now(vm)
+        return [now.year, now.month, now.day]
+
+class getTime(Variable):
+    def get(self, vm):
+        now = _now(vm)
+        return [now.hour, now.minute, now.second]
+
+class setDate(Function):
+    def call(self, vm, args):
+        assert len(args) == 3
+        y, m, d = (int(a) for a in args)
+        now = _now(vm)
+        target = datetime.datetime(y, m, d, now.hour, now.minute, now.second, now.microsecond)
+        vm.clock_offset = target - datetime.datetime.now()
+        return [y, m, d]
+
+class setTime(Function):
+    def call(self, vm, args):
+        assert len(args) == 3
+        h, mi, s = (int(a) for a in args)
+        now = _now(vm)
+        target = datetime.datetime(now.year, now.month, now.day, h, mi, s)
+        vm.clock_offset = target - datetime.datetime.now()
+        return [h, mi, s]
+
+class getDtFmt(Variable):
+    def get(self, vm):
+        return vm.date_fmt
+
+class setDtFmt(Function):
+    def call(self, vm, args):
+        assert len(args) == 1
+        fmt = int(args[0])
+        if fmt not in (1, 2, 3):
+            raise ExecutionError('ERR:ARGUMENT')
+        vm.date_fmt = fmt
+        return fmt
+
+class getTmFmt(Variable):
+    def get(self, vm):
+        return vm.time_fmt
+
+class setTmFmt(Function):
+    def call(self, vm, args):
+        assert len(args) == 1
+        fmt = int(args[0])
+        if fmt not in (12, 24):
+            raise ExecutionError('ERR:ARGUMENT')
+        vm.time_fmt = fmt
+        return fmt
+
+class getDtStr(Function):
+    def call(self, vm, args):
+        assert len(args) == 1
+        fmt = int(args[0])
+        now = _now(vm)
+        year = now.year % 100
+        if fmt == 1:
+            return '%02d/%02d/%02d' % (now.month, now.day, year)
+        elif fmt == 2:
+            return '%02d/%02d/%02d' % (now.day, now.month, year)
+        elif fmt == 3:
+            return '%02d/%02d/%02d' % (year, now.month, now.day)
+        raise ExecutionError('ERR:ARGUMENT')
+
+class getTmStr(Function):
+    def call(self, vm, args):
+        assert len(args) == 1
+        fmt = int(args[0])
+        now = _now(vm)
+        if fmt == 12:
+            hour = now.hour % 12 or 12
+            ampm = 'AM' if now.hour < 12 else 'PM'
+            return '%d:%02d %s' % (hour, now.minute, ampm)
+        elif fmt == 24:
+            return '%02d:%02d' % (now.hour, now.minute)
+        raise ExecutionError('ERR:ARGUMENT')
+
+class startTmr(Variable):
+    def get(self, vm):
+        return int(time.time())
+
+class checkTmr(Function):
+    def call(self, vm, args):
+        assert len(args) == 1
+        return int(time.time()) - int(args[0])
+
+class timeCnv(Function):
+    def call(self, vm, args):
+        assert len(args) == 1
+        seconds = int(args[0])
+        days, seconds = divmod(seconds, 86400)
+        hours, seconds = divmod(seconds, 3600)
+        minutes, seconds = divmod(seconds, 60)
+        return [days, hours, minutes, seconds]
 
 # file IO (not in original TI-Basic)
 
