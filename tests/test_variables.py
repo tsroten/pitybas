@@ -42,6 +42,16 @@ def test_list_store_and_index():
     assert vm.io.disps == [[1, 2, 3], [5, 2, 3]]
 
 
+def test_list_accepts_uppercase_l():
+    vm = run('{1,2,3}->L1\nDisp L1\n5->L1(1)\nDisp L1')
+    assert vm.io.disps == [[1, 2, 3], [5, 2, 3]]
+
+
+def test_uppercase_l_list_and_lowercase_l_list_are_the_same_list():
+    vm = run('{1,2,3}->L1\nDisp l1')
+    assert vm.io.disps == [[1, 2, 3]]
+
+
 def test_list_copy_is_independent():
     vm = run('{1}->l1\nl1->l2\n2->l2(1)\nDisp l1\nDisp l2')
     assert vm.io.disps == [[1], [2]]
