@@ -119,12 +119,12 @@ def test_archive_is_a_noop():
 
 
 def test_unarchive_is_a_noop():
-    vm = run('5->A\nUnarchive A\nDisp A')
+    vm = run('5->A\nUnArchive A\nDisp A')
     assert vm.io.disps == [5]
 
 
 def test_archive_and_unarchive_without_argument_are_safe():
-    vm = run('Archive\nUnarchive\nDisp 1')
+    vm = run('Archive\nUnArchive\nDisp 1')
     assert vm.io.disps == [1]
 
 

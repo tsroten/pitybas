@@ -496,7 +496,7 @@ class Archive(Token):
     def run(self, vm):
         pass
 
-class Unarchive(Archive):
+class UnArchive(Archive):
     pass
 
 # operators
