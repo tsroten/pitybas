@@ -396,6 +396,42 @@ class Sum(Function):
         arg = self.arg.flatten()
         return sum(vm.get(arg))
 
+class DeltaList(Function):
+    token = 'ΔList'
+
+    def get(self, vm):
+        assert self.arg and len(self.arg) == 1
+        lst = vm.get(self.arg.flatten())
+        return [lst[i + 1] - lst[i] for i in range(len(lst) - 1)]
+
+class cumSum(Function):
+    def get(self, vm):
+        assert self.arg and len(self.arg) == 1
+        lst = vm.get(self.arg.flatten())
+        total = 0
+        out = []
+        for x in lst:
+            total += x
+            out.append(total)
+        return out
+
+class SortA(Function):
+    descending = False
+
+    def run(self, vm):
+        assert self.arg and len(self.arg) >= 1
+        lists = [c.flatten() for c in self.arg.contents]
+        assert all(isinstance(l, List) for l in lists)
+        key = vm.get_list(lists[0].name)
+        indices = sorted(range(len(key)), key=lambda i: key[i], reverse=self.descending)
+        vm.set_list(lists[0].name, [key[i] for i in indices])
+        for dep_list in lists[1:]:
+            dep = vm.get_list(dep_list.name)
+            vm.set_list(dep_list.name, [dep[i] for i in indices])
+
+class SortD(SortA):
+    descending = True
+
 class Ans(Const):
     def get(self, vm): return vm.get_var('Ans')
 
@@ -437,6 +473,22 @@ class Str(SimpleVar, Stub):
 
 for i in range(10):
     add_class('Str%i' % i, StrVar)
+
+class DelVar(Token):
+    absorbs = (Expression, Variable)
+
+    def run(self, vm):
+        arg = self.arg
+        if arg is None:
+            return
+        if isinstance(arg, Expression):
+            arg = arg.flatten()
+        if isinstance(arg, List):
+            vm.lists.pop(arg.name, None)
+        elif isinstance(arg, Matrix):
+            vm.matrix.pop(arg.name, None)
+        else:
+            vm.vars.pop(arg.token, None)
 
 # operators
 
@@ -674,7 +726,7 @@ class iPart(MathExprFunction):
 
 class fPart(MathExprFunction):
     def call(self, vm, arg):
-        return math.modf(arg)[1]
+        return math.modf(arg)[0]
 
 class floor(MathExprFunction):
     def call(self, vm, arg):
