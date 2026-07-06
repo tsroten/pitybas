@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Added native support for the `~` negation token, the plaintext ASCII rendering of the calculator's dedicated negation key (same behavior as the `⁻` glyph)
 - Added `IS>(` and `DS<(`, the increment/decrement-and-skip loop-control commands
 - Added `Archive`/`UnArchive` as stubs (no-ops, since there's no separate archive memory in this interpreter)
 - Added an optional strict mode (`Interpreter(..., strict=True)` / `pb -x`) that raises `ExecutionError('ERR:UNDEFINED')` when reading an unset variable, instead of silently defaulting to `0`
