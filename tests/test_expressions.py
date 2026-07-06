@@ -106,6 +106,43 @@ def test_radian_symbol_forces_radians_regardless_of_mode():
     assert disp_of('Disp sin((3.14159265358979/2)r)')[0] == pytest.approx(1)
 
 
+def test_dms_literal_evaluates_to_decimal_degrees():
+    expected = 30 + 15 / 60 + 20 / 3600
+    assert disp_of('Degree\nDisp 30\xb015\x2720\x22')[0] == pytest.approx(expected)
+
+
+def test_dms_literal_converts_to_radians_in_radian_mode():
+    # like the standalone ° symbol, a DMS literal is always entered in
+    # degrees but converts to radians when the calculator isn't in
+    # Degree mode - it's not immune to the current angle mode.
+    expected = math.radians(30 + 15 / 60 + 20 / 3600)
+    assert disp_of('Disp 30\xb015\x2720\x22')[0] == pytest.approx(expected)
+
+
+def test_dms_literal_without_seconds():
+    expected = 30 + 15 / 60
+    assert disp_of('Degree\nDisp 30\xb015\x27')[0] == pytest.approx(expected)
+
+
+def test_dms_literal_with_negative_degrees():
+    expected = -(30 + 15 / 60 + 20 / 3600)
+    assert disp_of('Degree\nDisp -30\xb015\x2720\x22')[0] == pytest.approx(expected)
+
+
+def test_dms_literal_as_a_function_argument():
+    # exercises the bracket-stack lookback path (rather than the flat
+    # top-level-line path) for disambiguating " from a string quote.
+    expected = math.sin(math.radians(90))
+    assert disp_of('Degree\nDisp sin(90\xb00\x270\x22)')[0] == pytest.approx(expected)
+
+
+def test_string_literals_still_parse_around_dms_literals():
+    assert disp_of('Disp 30\xb015\x2720\x22\nDisp "after"') == [
+        pytest.approx(math.radians(30 + 15 / 60 + 20 / 3600)),
+        'after',
+    ]
+
+
 @pytest.mark.parametrize('expr,expected', [
     ('Disp 1<2', [1]),
     ('Disp 2<1', [0]),
