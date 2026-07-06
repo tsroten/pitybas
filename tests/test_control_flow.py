@@ -61,6 +61,36 @@ def test_repeat_loop_runs_until_condition_true():
     assert vm.io.disps == [1, 2, 3, 4, 5]
 
 
+def test_is_greater_than_skip_loops_until_past_threshold():
+    vm = run('0->A\nLbl LP\nIs>(A,3)\nGoto LP\nDisp A')
+    assert vm.io.disps == [4]
+
+
+def test_is_greater_than_skip_does_not_skip_when_not_past_threshold():
+    vm = run('0->A\nIs>(A,5)\nDisp "skipped"\nDisp "after"')
+    assert vm.io.disps == ['skipped', 'after']
+
+
+def test_is_greater_than_skip_skips_next_statement_when_past_threshold():
+    vm = run('5->A\nIs>(A,5)\nDisp "skipped"\nDisp "after"')
+    assert vm.io.disps == ['after']
+
+
+def test_ds_less_than_skip_loops_until_past_threshold():
+    vm = run('5->A\nLbl LP\nDs<(A,1)\nGoto LP\nDisp A')
+    assert vm.io.disps == [0]
+
+
+def test_ds_less_than_skip_does_not_skip_when_not_past_threshold():
+    vm = run('5->A\nDs<(A,0)\nDisp "skipped"\nDisp "after"')
+    assert vm.io.disps == ['skipped', 'after']
+
+
+def test_ds_less_than_skip_skips_next_statement_when_past_threshold():
+    vm = run('1->A\nDs<(A,1)\nDisp "skipped"\nDisp "after"')
+    assert vm.io.disps == ['after']
+
+
 def test_goto_lbl_skips_intermediate_code():
     vm = run('Goto A\nDisp "skipped"\nLbl A\nDisp "reached"')
     assert vm.io.disps == ['reached']
