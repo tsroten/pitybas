@@ -206,10 +206,17 @@ class Parser:
                 result = self.list()
             elif char.isalpha():
                 result = self.token()
+            elif char == '"':
+                # " is ambiguous: it's both the string-quote token and the
+                # DMS seconds symbol (30°15'20"). Only treat it as DMS
+                # seconds when it directly follows a minutes value (')  -
+                # otherwise it opens a string, same as always.
+                if self.dms_seconds_pending():
+                    result = self.symbol()
+                else:
+                    result = tokens.Value(self.string())
             elif char in self.SYMBOLS:
                 result = self.symbol()
-            elif char == '"':
-                result = tokens.Value(self.string())
             else:
                 self.error('could not tokenize: %s' % repr(char))
 
@@ -252,6 +259,16 @@ class Parser:
     def close_brackets(self):
         while self.stack:
             self.add(self.stack.pop())
+
+    def dms_seconds_pending(self):
+        if self.stack:
+            items = getattr(self.stack[-1], 'contents', None)
+        elif self.lines and self.line < len(self.lines):
+            items = self.lines[self.line]
+        else:
+            items = None
+
+        return bool(items) and len(items) >= 2 and isinstance(items[-2], tokens.MinuteSymbol)
 
     def symbol(self):
         token = self.token(True)

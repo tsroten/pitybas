@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Added DMS (degrees-minutes-seconds) angle literals, e.g. `30°15'20"`, which now parse and evaluate to decimal degrees (converting to radians in Radian mode, same as the standalone `°` symbol)
 - Added native support for the `~` negation token, the plaintext ASCII rendering of the calculator's dedicated negation key (same behavior as the `⁻` glyph)
 - Added `IS>(` and `DS<(`, the increment/decrement-and-skip loop-control commands
 - Added `Archive`/`UnArchive` as stubs (no-ops, since there's no separate archive memory in this interpreter)

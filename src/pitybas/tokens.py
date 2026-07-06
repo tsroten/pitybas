@@ -891,11 +891,48 @@ class atan(MathExprFunction):
 
 # angle mode
 
+def _terminal(right):
+    # RightExponent.fill_right() pads a trailing Value(None) onto a
+    # postfix operator with nothing after it; that's how we tell "D°" (no
+    # minutes follow) apart from "D°M" (mid-DMS-chain, more to fold in).
+    return isinstance(right, Value) and right.value is None
+
 class DegreeSymbol(RightExponent):
     # postfix °: treats its operand as degrees regardless of the current
     # angle mode, converting to radians only if we're in Radian mode
-    # (in Degree mode it's a no-op since raw numbers are already degrees)
+    # (in Degree mode it's a no-op since raw numbers are already degrees).
+    # Also doubles as the D in a D°M'S" DMS literal - when a minutes value
+    # follows, fold it in and defer the mode conversion to whichever
+    # symbol (this one, ', or ") turns out to be last in the chain.
     token = u'\xb0'
+
+    def run(self, vm, left, right):
+        value = vm.get(left)
+        if _terminal(right):
+            return value if vm.degree_mode else math.radians(value)
+
+        sign = -1 if value < 0 else 1
+        return value + sign * vm.get(right) / 60
+
+class MinuteSymbol(RightExponent):
+    # postfix ': only meaningful as the M in a DMS literal (D°M'S" or
+    # D°M'). Folds in a following seconds value, deferring the mode
+    # conversion to " if present, or applies it here if seconds are absent.
+    token = "'"
+
+    def run(self, vm, left, right):
+        value = vm.get(left)
+        if _terminal(right):
+            return value if vm.degree_mode else math.radians(value)
+
+        sign = -1 if value < 0 else 1
+        return value + sign * vm.get(right) / 3600
+
+class SecondSymbol(RightExponent):
+    # postfix ": the S in a DMS literal (D°M'S"). Always the last
+    # component - nothing can follow seconds - so always applies the
+    # degree/radian mode conversion.
+    token = '"'
 
     def run(self, vm, left, right):
         value = vm.get(left)
