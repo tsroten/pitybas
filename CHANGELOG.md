@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Lists can now be specified with an uppercase `L` (e.g. `L1`), matching the lowercase `l` and `∟` glyph forms already supported
+
 ## 0.3.0 (2026-07-05)
 
 ### Fixed
