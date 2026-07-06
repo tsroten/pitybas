@@ -179,6 +179,51 @@ def test_cumsum_deltalist_removes_first_element():
     assert vm.io.disps == [[20, 30, 40]]
 
 
+def test_prod_whole_list():
+    vm = run('{1,2,3,4,5}->lA\nDisp prod(lA)')
+    assert vm.io.disps == [120]
+
+
+def test_prod_with_start_only():
+    vm = run('{1,2,3,4,5}->lA\nDisp prod(lA,3)')
+    assert vm.io.disps == [60]
+
+
+def test_prod_with_start_and_end():
+    vm = run('{1,2,3,4,5}->lA\nDisp prod(lA,2,4)')
+    assert vm.io.disps == [24]
+
+
+def test_prod_of_list_literal():
+    vm = run('Disp prod({2,3,4})')
+    assert vm.io.disps == [24]
+
+
+def test_clrlist_single_list():
+    vm = run('{1,2,3}->lA\nClrList lA\nDisp lA')
+    assert vm.io.disps == [[]]
+
+
+def test_clrlist_multiple_lists():
+    vm = run('{1,2,3}->lA\n{4,5}->lB\nClrList lA,lB\nDisp lA\nDisp lB')
+    assert vm.io.disps == [[], []]
+
+
+def test_clrlist_dim_returns_zero_after_clear():
+    vm = run('{1,2,3}->lA\nClrList lA\nDisp dim(lA)')
+    assert vm.io.disps == [0]
+
+
+def test_clralllists_clears_every_list():
+    vm = run('{1,2,3}->lA\n{4,5}->lB\nClrAllLists\nDisp lA\nDisp lB')
+    assert vm.io.disps == [[], []]
+
+
+def test_clralllists_without_lists_is_safe():
+    vm = run('ClrAllLists\nDisp 1')
+    assert vm.io.disps == [1]
+
+
 def test_sorta_deck_shuffle_permutes_deck():
     # The deck shuffle pattern from the TI-BASIC guide:
     # seq(X,X,1,5->lDECK, rand(5->lRND, SortA(lRND,lDECK)
