@@ -396,6 +396,18 @@ class Sum(Function):
         arg = self.arg.flatten()
         return sum(vm.get(arg))
 
+class prod(Function):
+    def call(self, vm, args):
+        assert len(args) in (1, 2, 3)
+        lst = args[0]
+        assert isinstance(lst, list)
+
+        start = args[1] if len(args) >= 2 else 1
+        end = args[2] if len(args) >= 3 else len(lst)
+        assert start >= 1 and start <= end <= len(lst)
+
+        return reduce(lambda a, b: a * b, lst[start - 1:end], 1)
+
 class DeltaList(Function):
     token = 'ΔList'
 
@@ -498,6 +510,26 @@ class Archive(Token):
 
 class UnArchive(Archive):
     pass
+
+class ClrList(Token):
+    absorbs = (Expression, Variable, Tuple)
+
+    def run(self, vm):
+        arg = self.arg
+        if not arg:
+            raise ExecutionError('ClrList used without arguments')
+
+        lists = arg.contents if isinstance(arg, Tuple) else [arg]
+        for lst in lists:
+            if isinstance(lst, Expression):
+                lst = lst.flatten()
+            assert isinstance(lst, List)
+            lst.dim(vm, 0)
+
+class ClrAllLists(Token):
+    def run(self, vm):
+        for name in list(vm.lists):
+            vm.set_list(name, [])
 
 # operators
 
