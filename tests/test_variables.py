@@ -113,6 +113,21 @@ def test_delvar_on_unset_variable_is_safe():
     assert vm.io.disps == [0]
 
 
+def test_archive_is_a_noop():
+    vm = run('5->A\nArchive A\nDisp A')
+    assert vm.io.disps == [5]
+
+
+def test_unarchive_is_a_noop():
+    vm = run('5->A\nUnArchive A\nDisp A')
+    assert vm.io.disps == [5]
+
+
+def test_archive_and_unarchive_without_argument_are_safe():
+    vm = run('Archive\nUnArchive\nDisp 1')
+    assert vm.io.disps == [1]
+
+
 def test_sorta_single_list():
     vm = run('{3,1,2}->lA\nSortA(lA)\nDisp lA')
     assert vm.io.disps == [[1, 2, 3]]
