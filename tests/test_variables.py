@@ -65,6 +65,16 @@ def test_uppercase_l_list_and_lowercase_l_list_are_the_same_list():
     assert vm.io.disps == [[1, 2, 3]]
 
 
+def test_small_capital_l_list_store_and_index():
+    vm = run(u'{1,2,3}->ʟNUMS\nDisp ʟNUMS\n5->ʟNUMS(1)\nDisp ʟNUMS')
+    assert vm.io.disps == [[1, 2, 3], [5, 2, 3]]
+
+
+def test_small_capital_l_list_same_as_right_angle_list():
+    vm = run(u'{1,2,3}->ʟNUMS\nDisp ∟NUMS')
+    assert vm.io.disps == [[1, 2, 3]]
+
+
 def test_list_subscript_digit_store_and_get():
     vm = run('{1,2,3}->L₁\nDisp L₁\n5->L₁(1)\nDisp L₁')
     assert vm.io.disps == [[1, 2, 3], [5, 2, 3]]
