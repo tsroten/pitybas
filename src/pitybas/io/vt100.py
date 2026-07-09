@@ -273,20 +273,31 @@ class IO(IOBase):
     def __init__(self, vm):
         self.vm = vm
         self.vt = VT()
+        # Which full-screen view a real TI-83/84 would currently be
+        # showing: "text" (home screen) or "graph". Graph-drawing calls
+        # switch to "graph"; anything that displays home-screen content
+        # (Disp, Output(, Input/Prompt/Pause, Menu(, ClrHome) switches
+        # back to "text" -- mirroring how the two screens are mutually
+        # exclusive full-screen modes on real hardware, not simultaneously
+        # visible regions like the vt100 terminal layout below.
+        self._last_screen = "text"
 
     def __enter__(self):
         self.vt.e("[?25l")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # Mirror a real TI-83/84: the last screen a program drew (here, the
-        # graph) stays up until the user dismisses it, rather than the
-        # process exiting straight back to the shell out from under it.
-        # Skip the wait on an unhandled exception so the traceback (printed
-        # by cli.py after this exits) isn't gated behind a keypress, and
-        # skip it if the graph is currently blank (nothing to protect).
+        # Mirror a real TI-83/84: if the graph screen is still the active
+        # view when the program stops, it stays up until the user
+        # dismisses it, rather than the process exiting straight back to
+        # the shell out from under it. If a later Disp/Output(/Pause/etc.
+        # already switched back to the text screen, there's nothing to
+        # hold -- that's the resting state and just stays displayed.
+        # Skip the wait entirely on an unhandled exception so the
+        # traceback (printed by cli.py after this exits) isn't gated
+        # behind a keypress.
         try:
-            if exc_type is None and any(any(row) for row in self.vm.graph.pixels):
+            if exc_type is None and self._last_screen == "graph":
                 while self.vt.getch() is None:
                     pass
         finally:
@@ -294,9 +305,11 @@ class IO(IOBase):
 
     def clear(self):
         self.vt.clear()
+        self._last_screen = "text"
 
     def input(self, msg, is_str=False):
         # TODO: implement this in VT terms
+        self._last_screen = "text"
         while True:
             try:
                 self.vt.push()
@@ -331,12 +344,14 @@ class IO(IOBase):
     def output(self, row, col, msg):
         self.vt.output(row, col, msg)
         self.vt.flush()
+        self._last_screen = "text"
 
     def disp(self, msg=""):
         if isinstance(msg, (complex, int, float)):
             msg = str(msg).rjust(16)
 
         self.vt.write(msg)
+        self._last_screen = "text"
 
     def pause(self, msg=""):
         if msg:
@@ -348,6 +363,7 @@ class IO(IOBase):
         # already-evaluated display strings; label is a raw, unevaluated
         # token for Goto to resolve.
         # TODO: implement this in VT terms
+        self._last_screen = "text"
 
         while True:
             lookup = []
@@ -382,6 +398,7 @@ class IO(IOBase):
         reconstructed from those args alone. Repainting the full grid on
         every callback is cheap at 48x16 characters.
         """
+        self._last_screen = "graph"
         self.vt.e("7")
         for i, line in enumerate(render_braille(self.vm.graph.pixels)):
             self.vt.e("[%i;%iH" % (self.GRAPH_ROW + i, self.GRAPH_COL))
