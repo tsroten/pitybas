@@ -1792,7 +1792,7 @@ class DrawF(Token):
             if had_x:
                 vm.vars["X"] = old_x
             else:
-                del vm.vars["X"]
+                vm.vars.pop("X", None)
 
         vm.io.draw_function()
 
