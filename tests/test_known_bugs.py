@@ -76,6 +76,14 @@ Enter instead of translating it to 'enter'. IO.getkey() looks up
 returned 0 no matter how many times it was pressed. Fixed by having
 getch() translate '\r'/'\n' to the string 'enter' before returning, the
 same way arrow keys are translated.
+
+Bug 11 (fixed): IO.menu (pitybas/io/simple.py, pitybas/io/vt100.py)
+initialised `lookup = []` outside the `while True:` retry loop. On each
+invalid-choice iteration the same labels were appended again, so after
+one failed attempt a 2-item menu's `lookup` held 4 entries. A choice of
+'3' (one beyond the displayed range) then became valid and returned the
+wrong label. Fixed by moving `lookup = []` inside the loop so it is
+rebuilt fresh on every display/prompt cycle.
 """
 import io as std_io
 import types
@@ -188,3 +196,24 @@ def test_getkey_returns_enter_keycode_for_carriage_return(monkeypatch):
 
     io = vt100.IO(Interpreter.from_string(''))
     assert io.getkey() == 105
+
+
+def test_io_menu_lookup_resets_on_retry(monkeypatch, capsys):
+    """Reproduces bug 11: IO.menu in simple.py/vt100.py kept `lookup` outside
+    the retry loop.  After one invalid choice the list doubled, so '3' on a
+    2-item menu became valid (pointing at the wrong label 'A' instead of
+    being rejected).  The fix moves `lookup = []` inside the loop."""
+    from pitybas.interpret import Interpreter
+    from pitybas.io.simple import IO
+
+    # After 'bad' (non-digit), '3' must still be out-of-range for a 2-item
+    # menu and cause another reprompt.  Only '2' should succeed, returning 'B'.
+    responses = iter(['bad', '3', '2'])
+    monkeypatch.setattr('builtins.input', lambda: next(responses))
+
+    vm = Interpreter.from_string('')
+    io = IO(vm)
+
+    menu = (('t', [('opt1', 'A'), ('opt2', 'B')]),)
+    assert io.menu(menu) == 'B'
+    assert capsys.readouterr().out.count('invalid choice') == 2

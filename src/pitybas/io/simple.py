@@ -46,8 +46,8 @@ class IO(IOBase):
         # menu is a tuple of (title, [(desc, label)]) -- title/desc are
         # already-evaluated display strings; label is a raw, unevaluated
         # token for Goto to resolve.
-        lookup = []
         while True:
+            lookup = []
             i = 1
 
             for title, entries in menu:
