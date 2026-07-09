@@ -8,6 +8,7 @@ import traceback
 from .parse import Parser, ParseError
 from .tokens import EOF, Value, REPL
 from .common import ExecutionError, StopError, ReturnError
+from .graph import GraphState
 
 from pitybas.io.simple import IO
 from .expression import Base
@@ -48,6 +49,7 @@ class Interpreter(object):
         self.matrix = {}
         self.fixed = -1
         self.degree_mode = False
+        self.graph = GraphState()
 
         # date/time clock: real wall-clock time offset by this amount, so
         # setDate(/setTime( can rewrite the "current" date/time without

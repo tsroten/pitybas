@@ -369,6 +369,40 @@ for i in range(10):
     add_class("Str%i" % i, StrVar)
 
 
+class GraphVar(Variable, Stub):
+    graph_attr = None
+
+    def set(self, vm, value):
+        setattr(vm.graph, self.graph_attr, value)
+
+    def get(self, vm):
+        return getattr(vm.graph, self.graph_attr)
+
+
+class Xmin(GraphVar):
+    graph_attr = "xmin"
+
+
+class Xmax(GraphVar):
+    graph_attr = "xmax"
+
+
+class Xscl(GraphVar):
+    graph_attr = "xscl"
+
+
+class Ymin(GraphVar):
+    graph_attr = "ymin"
+
+
+class Ymax(GraphVar):
+    graph_attr = "ymax"
+
+
+class Yscl(GraphVar):
+    graph_attr = "yscl"
+
+
 class DelVar(Token):
     absorbs = (Expression, Variable)
 
@@ -1491,6 +1525,46 @@ class Return(Token):
 class ClrHome(Token):
     def run(self, vm):
         vm.io.clear()
+
+
+class ClrDraw(Token):
+    def run(self, vm):
+        vm.graph.clear()
+        vm.io.clr_draw()
+
+
+class PtFunction(Function, Stub):
+    # True to turn the point on, False to turn it off, None to toggle
+    on = None
+
+    def call(self, vm, args):
+        assert len(args) in (2, 3)
+        x, y = args[0], args[1]
+
+        pixel = vm.graph.to_pixel(x, y)
+        if pixel is None:
+            return
+
+        px, py = pixel
+        on = self.on if self.on is not None else not vm.graph.get_pixel(px, py)
+
+        vm.graph.set_pixel(px, py, on)
+        vm.io.draw_pixel(px, py, on)
+
+
+class PtOn(PtFunction):
+    token = "Pt-On"
+    on = True
+
+
+class PtOff(PtFunction):
+    token = "Pt-Off"
+    on = False
+
+
+class PtChange(PtFunction):
+    token = "Pt-Change"
+    on = None
 
 
 class Radian(Token):
