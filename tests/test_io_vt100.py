@@ -493,6 +493,134 @@ def test_io_exit_shows_cursor(io_obj, capsys):
     assert "\033[?25h" in capsys.readouterr().out
 
 
+def test_io_exit_does_not_wait_when_text_screen_is_last_shown(io_obj, monkeypatch):
+    # A program that never drew to the graph screen (or last touched the
+    # text screen) has nothing on the graph screen to protect, so exiting
+    # shouldn't block waiting for a keypress.
+    monkeypatch.setattr(VT, "getch", lambda self: (_ for _ in ()).throw(AssertionError))
+    io_obj.__exit__(None, None, None)  # should not raise
+
+
+def test_io_exit_waits_for_keypress_when_graph_is_last_shown(io_obj, monkeypatch):
+    # Mirrors a real TI-83/84: the drawn graph stays up until dismissed
+    # instead of the process exiting straight back to the shell under it.
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_pixel(0, 0, True)
+    calls = []
+    monkeypatch.setattr(VT, "getch", lambda self: calls.append(1) or "enter")
+    io_obj.__exit__(None, None, None)
+    assert calls == [1]
+
+
+def test_io_exit_does_not_wait_when_text_follows_a_draw(io_obj, monkeypatch):
+    # Confirmed on real hardware: ClrDraw/Circle(/Disp "DONE" does NOT hold
+    # at exit -- Disp switches the active screen back to text/home, and
+    # that's what's left showing (see PR discussion for the hardware
+    # scenario this regression-tests).
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_pixel(0, 0, True)
+    io_obj.disp("DONE")
+    monkeypatch.setattr(VT, "getch", lambda self: (_ for _ in ()).throw(AssertionError))
+    io_obj.__exit__(None, None, None)  # should not raise
+
+
+def test_io_exit_waits_when_draw_follows_text(io_obj, monkeypatch):
+    # Confirmed on real hardware: Disp "BEFORE"/ClrDraw/Circle( DOES hold
+    # at exit -- the graph screen took over and is still the active view.
+    io_obj.disp("BEFORE")
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_pixel(0, 0, True)
+    calls = []
+    monkeypatch.setattr(VT, "getch", lambda self: calls.append(1) or "enter")
+    io_obj.__exit__(None, None, None)
+    assert calls == [1]
+
+
+def test_io_exit_does_not_wait_after_pause_dismissed(io_obj, monkeypatch):
+    # Confirmed on real hardware: dismissing a Pause that's holding the
+    # graph screen (pressing Enter) itself returns to the text/home
+    # screen -- nothing further should hold at actual program end.
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_pixel(0, 0, True)
+    monkeypatch.setattr("builtins.input", lambda: "")
+    io_obj.pause()
+    monkeypatch.setattr(VT, "getch", lambda self: (_ for _ in ()).throw(AssertionError))
+    io_obj.__exit__(None, None, None)  # should not raise
+
+
+def test_io_exit_polls_getch_until_a_key_is_pressed(io_obj, monkeypatch):
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_pixel(0, 0, True)
+    responses = iter([None, None, "enter"])
+    monkeypatch.setattr(VT, "getch", lambda self: next(responses))
+    io_obj.__exit__(None, None, None)  # should not raise StopIteration
+
+
+def test_io_exit_skips_wait_on_unhandled_exception(io_obj, monkeypatch):
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_pixel(0, 0, True)
+    monkeypatch.setattr(VT, "getch", lambda self: (_ for _ in ()).throw(AssertionError))
+    io_obj.__exit__(ValueError, ValueError("boom"), None)  # should not raise
+
+
+def test_io_exit_restores_cursor_even_if_getch_raises(io_obj, monkeypatch, capsys):
+    # A Ctrl-C while holding the graph screen must not leave the terminal
+    # cursor hidden -- the show-cursor sequence has to run regardless of
+    # how the wait loop exits.
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_pixel(0, 0, True)
+    monkeypatch.setattr(
+        VT, "getch", lambda self: (_ for _ in ()).throw(KeyboardInterrupt)
+    )
+    with pytest.raises(KeyboardInterrupt):
+        io_obj.__exit__(None, None, None)
+
+
+# ── IO: _last_screen tracking ────────────────────────────────────────────────
+
+
+def test_last_screen_starts_as_text(io_obj):
+    assert io_obj._last_screen == "text"
+
+
+def test_last_screen_is_graph_after_draw(io_obj):
+    io_obj.draw_pixel(0, 0, True)
+    assert io_obj._last_screen == "graph"
+
+
+def test_last_screen_is_text_after_disp(io_obj):
+    io_obj.draw_pixel(0, 0, True)
+    io_obj.disp("hi")
+    assert io_obj._last_screen == "text"
+
+
+def test_last_screen_is_text_after_output(io_obj):
+    io_obj.draw_pixel(0, 0, True)
+    io_obj.output(1, 1, "hi")
+    assert io_obj._last_screen == "text"
+
+
+def test_last_screen_is_text_after_clear(io_obj):
+    io_obj.draw_pixel(0, 0, True)
+    io_obj.clear()
+    assert io_obj._last_screen == "text"
+
+
+def test_last_screen_is_text_after_input(io_obj, monkeypatch):
+    io_obj.draw_pixel(0, 0, True)
+    monkeypatch.setattr("builtins.input", lambda: "1")
+    io_obj.input("n?")
+    assert io_obj._last_screen == "text"
+
+
+def test_last_screen_is_text_after_menu(io_obj, monkeypatch):
+    io_obj.draw_pixel(0, 0, True)
+    menu = (("t", [("only", "LBL")]),)
+    monkeypatch.setattr("builtins.input", lambda *_: "1")
+    io_obj.menu(menu)
+    assert io_obj._last_screen == "text"
+
+
 # ── IO: clear ────────────────────────────────────────────────────────────────
 
 

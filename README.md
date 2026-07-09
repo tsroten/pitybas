@@ -60,7 +60,7 @@ Recorded attributes:
 
 ## Known Limitations
 
-- **The graph screen only renders with the `vt100` IO backend.** Commands that draw to the TI-83/84 graph screen (e.g. `Circle(`, `Line(`, `Pt-On(`) update the pixel buffer under any backend, but only `vt100` (`pb -i vt100`) visibly renders it, as a 48x16 grid of Unicode Braille characters below the text screen. The `simple` (default) backend tracks pixel state without drawing anything.
+- **The graph screen only renders with the `vt100` IO backend.** Commands that draw to the TI-83/84 graph screen (e.g. `Circle(`, `Line(`, `Pt-On(`) update the pixel buffer under any backend, but only `vt100` (`pb -i vt100`) visibly renders it, as a 48x16 grid of Unicode Braille characters below the text screen. The `simple` (default) backend tracks pixel state without drawing anything. If the graph screen is still the most recently drawn-to screen when a program ends, `vt100` holds it and waits for a keypress before exiting, mirroring how a real TI-83/84 leaves the last screen up until dismissed; if a later `Disp`/`Output(`/`Pause`/etc. switched back to the text screen first, nothing holds.
 
 ## Development
 
