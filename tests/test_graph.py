@@ -109,3 +109,66 @@ def test_clrdraw_resets_pixel_buffer_and_notifies_io():
     vm = run("Pt-On(0,0\nClrDraw")
     assert not any(any(row) for row in vm.graph.pixels)
     assert vm.io.clr_draws == 1
+
+
+def test_line_draws_pixels_between_endpoints():
+    vm = run("Line(-5,0,5,0")
+    assert vm.graph.get_pixel(24, 31) is True
+    assert vm.graph.get_pixel(70, 31) is True
+    assert vm.graph.get_pixel(47, 31) is True
+    assert vm.io.lines == [(-5, 0, 5, 0, True)]
+    # shape draws don't also fire the per-pixel Pt-On hook
+    assert vm.io.draws == []
+
+
+def test_line_erase_flag_clears_previously_drawn_pixels():
+    vm = run("Line(-5,0,5,0\nLine(-5,0,5,0,0")
+    assert not any(any(row) for row in vm.graph.pixels)
+    assert vm.io.lines == [(-5, 0, 5, 0, True), (-5, 0, 5, 0, False)]
+
+
+def test_line_extending_past_window_clips_to_the_visible_segment():
+    vm = run("Line(-20,0,20,0")
+    assert all(vm.graph.get_pixel(px, 31) for px in range(95))
+    # io is notified with the original, unclipped coordinates
+    assert vm.io.lines == [(-20, 0, 20, 0, True)]
+
+
+def test_line_entirely_outside_window_draws_nothing_without_raising():
+    vm = run("Line(-20,-20,-15,-15")
+    assert not any(any(row) for row in vm.graph.pixels)
+    assert vm.io.lines == [(-20, -20, -15, -15, True)]
+
+
+def test_circle_draws_points_on_the_circumference():
+    vm = run("Circle(0,0,5")
+    assert vm.graph.get_pixel(70, 31) is True  # (5, 0)
+    assert vm.graph.get_pixel(24, 31) is True  # (-5, 0)
+    assert vm.graph.get_pixel(47, 16) is True  # (0, 5)
+    assert vm.graph.get_pixel(47, 46) is True  # (0, -5)
+    assert vm.io.circles == [(0, 0, 5, True)]
+    assert vm.io.draws == []
+
+
+def test_circle_large_radius_outside_window_draws_nothing_without_raising():
+    vm = run("Circle(0,0,100")
+    assert not any(any(row) for row in vm.graph.pixels)
+    assert vm.io.circles == [(0, 0, 100, True)]
+
+
+def test_horizontal_draws_a_full_width_row():
+    vm = run("Horizontal 0")
+    assert all(vm.graph.get_pixel(px, 31) for px in range(95))
+    assert vm.io.lines == [(-10, 0, 10, 0, True)]
+
+
+def test_vertical_draws_a_full_height_column():
+    vm = run("Vertical 0")
+    assert all(vm.graph.get_pixel(47, py) for py in range(63))
+    assert vm.io.lines == [(0, -10, 0, 10, True)]
+
+
+def test_horizontal_outside_window_draws_nothing_without_raising():
+    vm = run("Horizontal 20")
+    assert not any(any(row) for row in vm.graph.pixels)
+    assert vm.io.lines == [(-10, 20, 10, 20, True)]

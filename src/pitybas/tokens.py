@@ -8,6 +8,7 @@ from functools import reduce
 
 from .common import Pri, ExecutionError, StopError, ReturnError
 from .expression import Tuple, Expression, Arguments, ListExpr, MatrixExpr
+from .graph import MAX_COL
 from .token_core import (
     Function,
     InvalidOperation,
@@ -1565,6 +1566,144 @@ class PtOff(PtFunction):
 class PtChange(PtFunction):
     token = "Pt-Change"
     on = None
+
+
+def _clip_segment(graph, x1, y1, x2, y2):
+    """Clip (x1,y1)-(x2,y2) to the graph window (Liang-Barsky).
+
+    Returns the clipped ((x1,y1), (x2,y2)) endpoints, or None if the
+    segment lies entirely outside the window.
+    """
+    if graph.xmax == graph.xmin or graph.ymax == graph.ymin:
+        return None
+
+    dx, dy = x2 - x1, y2 - y1
+    t0, t1 = 0.0, 1.0
+
+    for p, q in (
+        (-dx, x1 - graph.xmin),
+        (dx, graph.xmax - x1),
+        (-dy, y1 - graph.ymin),
+        (dy, graph.ymax - y1),
+    ):
+        if p == 0:
+            if q < 0:
+                return None
+            continue
+
+        t = q / p
+        if p < 0:
+            if t > t1:
+                return None
+            t0 = max(t0, t)
+        else:
+            if t < t0:
+                return None
+            t1 = min(t1, t)
+
+    if t0 > t1:
+        return None
+
+    return (x1 + t0 * dx, y1 + t0 * dy), (x1 + t1 * dx, y1 + t1 * dy)
+
+
+def _plot_line(graph, px1, py1, px2, py2, on):
+    """Bresenham a line between two pixel coordinates, setting each pixel."""
+    dx = abs(px2 - px1)
+    dy = -abs(py2 - py1)
+    sx = 1 if px1 < px2 else -1
+    sy = 1 if py1 < py2 else -1
+    err = dx + dy
+
+    px, py = px1, py1
+    while True:
+        graph.set_pixel(px, py, on)
+
+        if px == px2 and py == py2:
+            break
+
+        e2 = 2 * err
+        if e2 >= dy:
+            err += dy
+            px += sx
+        if e2 <= dx:
+            err += dx
+            py += sy
+
+
+def draw_line(vm, x1, y1, x2, y2, on=True):
+    """Plot a line between two window coordinates, clipping to the window.
+
+    Shared by Line(, Horizontal, and Vertical. Points outside the window
+    are silently skipped rather than clamped or raising, consistent with
+    GraphState.to_pixel's contract.
+    """
+    clipped = _clip_segment(vm.graph, x1, y1, x2, y2)
+    if clipped is not None:
+        p1 = vm.graph.to_pixel(*clipped[0])
+        p2 = vm.graph.to_pixel(*clipped[1])
+        if p1 is not None and p2 is not None:
+            _plot_line(vm.graph, p1[0], p1[1], p2[0], p2[1], on)
+
+    vm.io.draw_line(x1, y1, x2, y2, on)
+
+
+def draw_circle(vm, x, y, r, on=True):
+    """Plot a circle via analytic point generation, skipping off-window points."""
+    graph = vm.graph
+
+    if graph.xmax != graph.xmin and r != 0:
+        pixel_radius = abs(r) / (graph.xmax - graph.xmin) * MAX_COL
+        steps = max(4, int(2 * math.pi * pixel_radius))
+
+        seen = set()
+        for i in range(steps):
+            theta = 2 * math.pi * i / steps
+            pixel = graph.to_pixel(x + r * math.cos(theta), y + r * math.sin(theta))
+            if pixel is None or pixel in seen:
+                continue
+
+            seen.add(pixel)
+            graph.set_pixel(pixel[0], pixel[1], on)
+
+    vm.io.draw_circle(x, y, r, on)
+
+
+class Line(Function):
+    def call(self, vm, args):
+        assert len(args) in (4, 5)
+        x1, y1, x2, y2 = args[0], args[1], args[2], args[3]
+        on = args[4] != 0 if len(args) == 5 else True
+
+        draw_line(vm, x1, y1, x2, y2, on)
+
+
+class Circle(Function):
+    def call(self, vm, args):
+        assert len(args) == 3
+        x, y, r = args
+
+        draw_circle(vm, x, y, r)
+
+
+class Horizontal(Token):
+    absorbs = (Value, Expression)
+
+    def run(self, vm):
+        assert self.arg is not None
+        y = vm.get(self.arg)
+
+        draw_line(vm, vm.graph.xmin, y, vm.graph.xmax, y)
+
+
+class Vertical(Token):
+    absorbs = (Value, Expression)
+
+    def run(self, vm):
+        assert self.arg is not None
+        x = vm.get(self.arg)
+
+        draw_line(vm, x, vm.graph.ymin, x, vm.graph.ymax)
 
 
 class Radian(Token):

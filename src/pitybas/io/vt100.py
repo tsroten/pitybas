@@ -302,3 +302,9 @@ class IO(IOBase):
 
     def clr_draw(self):
         pass
+
+    def draw_line(self, x1, y1, x2, y2, on):
+        pass
+
+    def draw_circle(self, x, y, r, on):
+        pass
