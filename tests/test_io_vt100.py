@@ -4,9 +4,20 @@ import types
 
 import pytest
 
+from pitybas.graph import GraphState
 from pitybas.interpret import Interpreter
 from pitybas.io import vt100
-from pitybas.io.vt100 import Delayed, IO, SafeIO, VT, keycodes
+from pitybas.io.vt100 import (
+    BRAILLE_BASE,
+    Delayed,
+    GRAPH_COLS,
+    GRAPH_ROWS,
+    IO,
+    SafeIO,
+    VT,
+    keycodes,
+    render_braille,
+)
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -644,3 +655,132 @@ def test_io_menu_first_choice_is_valid(io_obj, monkeypatch, capsys):
     menu = (("t", [("alpha", "A"), ("beta", "B")]),)
     monkeypatch.setattr("builtins.input", lambda *_: "1")
     assert io_obj.menu(menu) == "A"
+
+
+# ── render_braille ───────────────────────────────────────────────────────────
+
+
+def _blank_pixels():
+    graph = GraphState()
+    return graph.pixels
+
+
+def test_render_braille_returns_correct_dimensions():
+    lines = render_braille(_blank_pixels())
+    assert len(lines) == GRAPH_ROWS
+    assert all(len(line) == GRAPH_COLS for line in lines)
+
+
+def test_render_braille_all_blank_pixels_yields_blank_braille_cells():
+    lines = render_braille(_blank_pixels())
+    assert all(ch == chr(BRAILLE_BASE) for line in lines for ch in line)
+
+
+@pytest.mark.parametrize(
+    "dx,dy,bit",
+    [
+        (0, 0, 0x01),
+        (0, 1, 0x02),
+        (0, 2, 0x04),
+        (0, 3, 0x40),
+        (1, 0, 0x08),
+        (1, 1, 0x10),
+        (1, 2, 0x20),
+        (1, 3, 0x80),
+    ],
+)
+def test_render_braille_dot_bit_mapping(dx, dy, bit):
+    pixels = _blank_pixels()
+    pixels[dy][dx] = True
+    lines = render_braille(pixels)
+    assert lines[0][0] == chr(BRAILLE_BASE + bit)
+    # every other cell in the grid stays blank
+    assert all(ch == chr(BRAILLE_BASE) for ch in lines[0][1:])
+    assert all(ch == chr(BRAILLE_BASE) for line in lines[1:] for ch in line)
+
+
+def test_render_braille_full_cell_sets_all_dot_bits():
+    pixels = _blank_pixels()
+    for row in range(4):
+        for col in range(2):
+            pixels[row][col] = True
+    lines = render_braille(pixels)
+    assert lines[0][0] == chr(BRAILLE_BASE + 0xFF)
+
+
+def test_render_braille_maps_row_major_pixels_not_transposed():
+    # a pixel at row 0 col 1 should light up dot (dx=1, dy=0) -> bit 0x08,
+    # not accidentally be read as row 1 col 0 -> bit 0x02.
+    pixels = _blank_pixels()
+    pixels[0][1] = True
+    lines = render_braille(pixels)
+    assert lines[0][0] == chr(BRAILLE_BASE + 0x08)
+
+
+def test_render_braille_handles_partial_last_cell_without_index_error():
+    # 63 rows / 4 = 15.75 -> the last Braille row only has 3 real pixel
+    # rows (60-62) backing it; the 4th (63) is out of bounds and must be
+    # silently treated as off rather than raising.
+    pixels = _blank_pixels()
+    pixels[62][0] = True
+    lines = render_braille(pixels)
+    assert lines[-1][0] == chr(BRAILLE_BASE + 0x04)  # dot (0, 2) -> row 62
+
+
+def test_render_braille_second_cell_column_offset():
+    pixels = _blank_pixels()
+    pixels[0][2] = True  # first dot of the second character cell
+    lines = render_braille(pixels)
+    assert lines[0][1] == chr(BRAILLE_BASE + 0x01)
+    assert lines[0][0] == chr(BRAILLE_BASE)
+
+
+# ── IO: graph rendering ──────────────────────────────────────────────────────
+
+
+def test_io_draw_pixel_paints_graph_region(io_obj, capsys):
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_pixel(0, 0, True)
+    out = capsys.readouterr().out
+    assert ("\033[%i;1H" % IO.GRAPH_ROW) in out
+    assert chr(BRAILLE_BASE + 0x01) in out
+
+
+def test_io_draw_pixel_writes_every_graph_row(io_obj, capsys):
+    io_obj.draw_pixel(0, 0, True)
+    out = capsys.readouterr().out
+    for i in range(GRAPH_ROWS):
+        assert ("\033[%i;1H" % (IO.GRAPH_ROW + i)) in out
+
+
+def test_io_draw_pixel_saves_and_restores_cursor(io_obj, capsys):
+    io_obj.draw_pixel(0, 0, True)
+    out = capsys.readouterr().out
+    assert out.startswith("\0337")
+    assert out.endswith("\0338")
+
+
+def test_io_clr_draw_blanks_graph_region(io_obj, capsys):
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_pixel(0, 0, True)
+    capsys.readouterr()
+
+    io_obj.vm.graph.clear()  # ClrDraw token clears vm.graph before calling io.clr_draw
+    io_obj.clr_draw()
+    out = capsys.readouterr().out
+    assert chr(BRAILLE_BASE + 0x01) not in out
+    assert (chr(BRAILLE_BASE) * GRAPH_COLS) in out
+
+
+def test_io_draw_line_repaints_from_graph_pixels(io_obj, capsys):
+    io_obj.vm.graph.set_pixel(10, 5, True)  # cell (col 5, row 1), dot (0, 1) -> 0x02
+    io_obj.draw_line(-10, 10, 10, -10, True)
+    out = capsys.readouterr().out
+    assert chr(BRAILLE_BASE + 0x02) in out
+
+
+def test_io_draw_circle_repaints_from_graph_pixels(io_obj, capsys):
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_circle(0, 0, 5, True)
+    out = capsys.readouterr().out
+    assert chr(BRAILLE_BASE + 0x01) in out
