@@ -1574,7 +1574,7 @@ class PxlFunction(Function, Stub):
 
     def call(self, vm, args):
         assert len(args) == 2
-        row, col = args[0], args[1]
+        row, col = round(args[0]), round(args[1])
 
         if not (0 <= row <= MAX_ROW and 0 <= col <= MAX_COL):
             return
@@ -1617,7 +1617,7 @@ class PxlTest(Function):
 
     def call(self, vm, args):
         assert len(args) == 2
-        row, col = args[0], args[1]
+        row, col = round(args[0]), round(args[1])
 
         if not (0 <= row <= MAX_ROW and 0 <= col <= MAX_COL):
             return 0

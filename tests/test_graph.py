@@ -247,3 +247,14 @@ def test_pxl_test_argument_order_is_row_col_not_x_y():
 def test_pxl_test_outside_grid_returns_0_without_raising():
     vm = run("Disp Pxl-Test(63,0)\nDisp Pxl-Test(0,95)")
     assert vm.io.disps == [0, 0]
+
+
+def test_pxl_on_rounds_non_integer_coordinates_instead_of_raising():
+    vm = run("Pxl-On(5.5,10.4")
+    assert vm.graph.get_pixel(10, 6) is True
+    assert vm.io.pxls == [(6, 10, True)]
+
+
+def test_pxl_test_rounds_non_integer_coordinates_instead_of_raising():
+    vm = run("Pxl-On(5.5,10.4\nDisp Pxl-Test(5.5,10.4)")
+    assert vm.io.disps == [1]
