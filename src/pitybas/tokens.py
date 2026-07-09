@@ -365,11 +365,6 @@ class THETA(NumVar):
 for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
     add_class(c, NumVar)
 
-
-class Str(SimpleVar, Stub):
-    pass
-
-
 for i in range(10):
     add_class("Str%i" % i, StrVar)
 
