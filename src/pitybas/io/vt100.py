@@ -52,6 +52,63 @@ keycodes = {
 }
 
 
+# Graph-screen Braille rendering ─────────────────────────────────────────────
+#
+# vm.graph.pixels (see pitybas.graph.GraphState) is a 63-row x 95-col
+# buffer, row-major: pixels[row][col]. Packing a 2 (wide) x 4 (tall) block
+# of dots into each Unicode Braille character (U+2800+) gives a 48x16
+# character grid, small enough to sit below the 16x8 text screen inside a
+# normal terminal window.
+#
+# Braille dot layout is not raster order: dots 1-2-3 run down the left
+# column with dot 7 at the bottom-left, dots 4-5-6 run down the right
+# column with dot 8 at the bottom-right. (dx, dy, bit) below maps a pixel's
+# offset within its 2x4 cell to the bit it contributes to the character.
+BRAILLE_BASE = 0x2800
+BRAILLE_DOTS = (
+    (0, 0, 0x01),
+    (0, 1, 0x02),
+    (0, 2, 0x04),
+    (0, 3, 0x40),
+    (1, 0, 0x08),
+    (1, 1, 0x10),
+    (1, 2, 0x20),
+    (1, 3, 0x80),
+)
+
+GRAPH_COLS = 48  # ceil(PIXEL_COLS / 2)
+GRAPH_ROWS = 16  # ceil(PIXEL_ROWS / 4)
+
+
+def render_braille(pixels):
+    """Render a row-major pixel buffer as Braille text.
+
+    Args:
+        pixels: Row-major pixel buffer (``pixels[row][col]``), truthy for
+            an "on" pixel, as found on ``GraphState.pixels``.
+
+    Returns:
+        A list of ``GRAPH_ROWS`` strings, each ``GRAPH_COLS`` Braille
+        characters wide, packing a 2 (wide) x 4 (tall) block of pixels into
+        each character.
+    """
+    rows = len(pixels)
+    cols = len(pixels[0]) if rows else 0
+
+    lines = []
+    for cell_row in range(GRAPH_ROWS):
+        chars = []
+        for cell_col in range(GRAPH_COLS):
+            bits = 0
+            for dx, dy, bit in BRAILLE_DOTS:
+                px, py = cell_col * 2 + dx, cell_row * 4 + dy
+                if px < cols and py < rows and pixels[py][px]:
+                    bits |= bit
+            chars.append(chr(BRAILLE_BASE + bits))
+        lines.append("".join(chars))
+    return lines
+
+
 class Delayed:
     """
     ensure at least duration time between __enter__ and __exit__
@@ -206,6 +263,13 @@ class VT:
 
 
 class IO(IOBase):
+    # Fixed screen layout: the 16x8 text screen (VT, above) occupies
+    # terminal rows 1-8, row 9 is reserved for Input/Prompt's prompt line
+    # (see input() below, which moves to row 9), and the 48x16 Braille
+    # graph region starts at row 10, so none of the three ever overlap.
+    GRAPH_ROW = 10
+    GRAPH_COL = 1
+
     def __init__(self, vm):
         self.vm = vm
         self.vt = VT()
@@ -297,23 +361,40 @@ class IO(IOBase):
             else:
                 print("invalid choice")
 
+    def _paint_graph(self):
+        """Repaint the whole Braille graph region from vm.graph.pixels.
+
+        draw_line/draw_circle mutate vm.graph.pixels directly (see
+        tokens._plot_line and the circle point-generation loop) and only
+        notify the IO backend with the original, unclipped window
+        coordinates -- not per-pixel updates -- so the shape can't be
+        reconstructed from those args alone. Repainting the full grid on
+        every callback is cheap at 48x16 characters.
+        """
+        self.vt.e("7")
+        for i, line in enumerate(render_braille(self.vm.graph.pixels)):
+            self.vt.e("[%i;%iH" % (self.GRAPH_ROW + i, self.GRAPH_COL))
+            sys.stdout.write(line)
+        self.vt.e("8")
+        sys.stdout.flush()
+
     def draw_pixel(self, px, py, on):
-        pass
+        self._paint_graph()
 
     def clr_draw(self):
-        pass
+        self._paint_graph()
 
     def draw_line(self, x1, y1, x2, y2, on):
-        pass
+        self._paint_graph()
 
     def draw_circle(self, x, y, r, on):
-        pass
+        self._paint_graph()
 
     def pxl_on(self, row, col):
-        pass
+        self._paint_graph()
 
     def pxl_off(self, row, col):
-        pass
+        self._paint_graph()
 
     def pxl_change(self, row, col, on):
-        pass
+        self._paint_graph()
