@@ -8,7 +8,7 @@ from functools import reduce
 
 from .common import Pri, ExecutionError, StopError, ReturnError
 from .expression import Tuple, Expression, Arguments, ListExpr, MatrixExpr
-from .graph import MAX_COL
+from .graph import MAX_COL, MAX_ROW, PIXEL_COLS, PIXEL_ROWS
 from .token_core import (
     Function,
     InvalidOperation,
@@ -1652,9 +1652,16 @@ def draw_circle(vm, x, y, r, on=True):
     """Plot a circle via analytic point generation, skipping off-window points."""
     graph = vm.graph
 
-    if graph.xmax != graph.xmin and r != 0:
-        pixel_radius = abs(r) / (graph.xmax - graph.xmin) * MAX_COL
-        steps = max(4, int(2 * math.pi * pixel_radius))
+    if graph.xmax != graph.xmin and graph.ymax != graph.ymin and r != 0:
+        px_radius = abs(r) / (graph.xmax - graph.xmin) * MAX_COL
+        py_radius = abs(r) / (graph.ymax - graph.ymin) * MAX_ROW
+        pixel_radius = max(px_radius, py_radius)
+
+        # a circle rasterized onto the 95x63 grid can never need more points
+        # than its bounding-box perimeter to look unbroken, regardless of
+        # how large r is in window coordinates
+        max_steps = 4 * (PIXEL_COLS + PIXEL_ROWS)
+        steps = min(max_steps, max(4, int(2 * math.pi * pixel_radius)))
 
         seen = set()
         for i in range(steps):

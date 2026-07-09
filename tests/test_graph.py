@@ -156,6 +156,22 @@ def test_circle_large_radius_outside_window_draws_nothing_without_raising():
     assert vm.io.circles == [(0, 0, 100, True)]
 
 
+def test_circle_samples_enough_points_on_a_tall_skewed_window():
+    # Ymax-Ymin is 100x wider than Xmax-Xmin, so a circle spanning the full
+    # y-range needs far more samples than an x-only pixel radius would give;
+    # under-sampling would leave gaps near the top/bottom of the circle.
+    vm = run("-1->Xmin\n1->Xmax\n-50->Ymin\n50->Ymax\nCircle(0,0,40")
+    assert vm.graph.get_pixel(47, 6) is True  # (0, 40), the circle's top point
+    assert any(any(row) for row in vm.graph.pixels)
+
+
+def test_circle_with_tiny_window_range_does_not_hang():
+    # Xmax-Xmin near zero would make the old x-only step formula explode;
+    # steps must be capped to the pixel grid regardless of window scale.
+    vm = run("-0.0001->Xmin\n0.0001->Xmax\nCircle(0,0,0.00005")
+    assert any(any(row) for row in vm.graph.pixels)
+
+
 def test_horizontal_draws_a_full_width_row():
     vm = run("Horizontal 0")
     assert all(vm.graph.get_pixel(px, 31) for px in range(95))
