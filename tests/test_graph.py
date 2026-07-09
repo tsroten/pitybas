@@ -1,7 +1,8 @@
 import pytest
 
 from conftest import run
-from pitybas.graph import GraphState
+from pitybas.common import ExecutionError
+from pitybas.graph import MAX_COL, TEXT_MAX_ROW, GraphState
 from pitybas.parse import Parser
 from pitybas import tokens
 
@@ -304,3 +305,76 @@ def test_zdecimal_sets_window_for_tenth_unit_pixel_spacing():
     # across the 95x63 (94/62 max-index) pixel grid
     assert (vm.graph.xmax - vm.graph.xmin) / 94 == pytest.approx(0.1)
     assert (vm.graph.ymax - vm.graph.ymin) / 62 == pytest.approx(0.1)
+
+
+def test_shade_fills_between_the_two_curves():
+    vm = run("Shade(0,X")
+    # at x=0, lower=0/upper=0 -> just the origin pixel
+    assert vm.graph.get_pixel(47, 31) is True
+    # at x=10 (px=94), lower=0/upper=10 -> the whole column between them
+    assert vm.graph.get_pixel(94, 0) is True
+    assert vm.graph.get_pixel(94, 31) is True
+    # outside the shaded x-range there's nothing above the lower curve
+    assert vm.graph.get_pixel(0, 0) is False
+
+
+def test_shade_notifies_io_draw_shade_hook():
+    vm = run("Shade(0,X")
+    assert vm.io.shades == 1
+
+
+def test_shade_restores_the_value_x_held_before_the_call():
+    vm = run("5->X\nShade(0,X\nDisp X")
+    assert vm.io.disps == [5]
+
+
+def test_shade_leaves_x_undefined_if_it_was_undefined_before_the_call():
+    vm = run("Shade(0,X")
+    assert "X" not in vm.vars
+
+
+def test_shade_respects_explicit_xmin_xmax():
+    vm = run("Shade(-10,10,0,10")
+    # negative x columns are outside [Xmin,Xmax] and stay unshaded
+    assert vm.graph.get_pixel(0, 31) is False
+    assert vm.graph.get_pixel(94, 31) is True
+
+
+def test_shade_skips_columns_where_lower_exceeds_upper():
+    vm = run("Shade(10,-10")
+    assert not any(any(row) for row in vm.graph.pixels)
+
+
+def test_text_notifies_io_draw_text_graph_hook():
+    vm = run('Text(0,0,"HI"')
+    assert vm.io.texts == [(0, 0, "HI")]
+
+
+def test_text_concatenates_multiple_trailing_values():
+    vm = run('5->A\nText(0,0,"X=",A')
+    assert vm.io.texts == [(0, 0, "X=5")]
+
+
+@pytest.mark.parametrize("row", [-1, 58])
+def test_text_row_out_of_bounds_raises_domain_error(row):
+    with pytest.raises(ExecutionError):
+        run('Text(%i,0,"HI"' % row)
+
+
+@pytest.mark.parametrize("col", [-1, 95])
+def test_text_col_out_of_bounds_raises_domain_error(col):
+    with pytest.raises(ExecutionError):
+        run('Text(0,%i,"HI"' % col)
+
+
+def test_text_non_integer_coordinates_raise_domain_error():
+    with pytest.raises(ExecutionError):
+        run('Text(0.5,0,"HI"')
+
+
+def test_text_shares_the_graph_screens_95_by_63_grid():
+    # row bound (57) is derived from the same 63-row grid as the rest of
+    # the graph screen (63 - 6px glyph height), and col bound (94) is
+    # exactly GraphState's MAX_COL -- not a second coordinate system.
+    assert TEXT_MAX_ROW == 57
+    assert MAX_COL == 94

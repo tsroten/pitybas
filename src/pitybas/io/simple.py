@@ -89,3 +89,9 @@ class IO(IOBase):
 
     def draw_function(self):
         pass
+
+    def draw_shade(self):
+        pass
+
+    def draw_text_graph(self, row, col, msg):
+        pass

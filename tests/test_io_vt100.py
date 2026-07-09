@@ -945,3 +945,17 @@ def test_io_draw_function_repaints_from_graph_pixels(io_obj, capsys):
     io_obj.draw_function()
     out = capsys.readouterr().out
     assert chr(BRAILLE_BASE + 0x01) in out
+
+
+def test_io_draw_shade_repaints_from_graph_pixels(io_obj, capsys):
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_shade()
+    out = capsys.readouterr().out
+    assert chr(BRAILLE_BASE + 0x01) in out
+
+
+def test_io_draw_text_graph_is_a_no_op(io_obj, capsys):
+    # Braille's 2x4 dot resolution is too coarse for pixel-accurate glyph
+    # rendering (see THO-16); this phase only wires up the hook.
+    io_obj.draw_text_graph(0, 0, "HI")
+    assert capsys.readouterr().out == ""

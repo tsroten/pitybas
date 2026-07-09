@@ -131,3 +131,18 @@ class IOBase(ABC):
     @abstractmethod
     def draw_function(self):
         """Render a DrawF plot of the graph screen's pixel buffer."""
+
+    @abstractmethod
+    def draw_shade(self):
+        """Render a Shade( fill of the graph screen's pixel buffer."""
+
+    @abstractmethod
+    def draw_text_graph(self, row, col, msg):
+        """Render a Text( string at raw pixel (row, col) on the graph screen.
+
+        Args:
+            row: Pixel row, 0-57 (tighter than the general 0-62 grid bound
+                so a 6px-tall glyph always fits).
+            col: Pixel column, 0-94.
+            msg: The already-concatenated display string to render.
+        """

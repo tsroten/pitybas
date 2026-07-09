@@ -8,7 +8,7 @@ from functools import reduce
 
 from .common import Pri, ExecutionError, StopError, ReturnError
 from .expression import Tuple, Expression, Arguments, ListExpr, MatrixExpr
-from .graph import MAX_COL, MAX_ROW, PIXEL_COLS, PIXEL_ROWS
+from .graph import MAX_COL, MAX_ROW, PIXEL_COLS, PIXEL_ROWS, TEXT_MAX_ROW
 from .token_core import (
     Function,
     InvalidOperation,
@@ -1795,6 +1795,81 @@ class DrawF(Token):
                 vm.vars.pop("X", None)
 
         vm.io.draw_function()
+
+
+class Shade(Function):
+    def run(self, vm):
+        args = self.arg.contents[:]
+        assert len(args) in (2, 4, 6)
+
+        graph = vm.graph
+        ylower, yupper = args[0], args[1]
+        xmin = vm.get(args[2]) if len(args) >= 4 else graph.xmin
+        xmax = vm.get(args[3]) if len(args) >= 4 else graph.xmax
+        # patres controls how many pixel columns are sampled (a coarser
+        # approximation of the real "resolution" parameter's line density);
+        # pattern is accepted for signature compatibility but every value
+        # renders as solid fill, since the real per-pattern pixel layout
+        # wasn't verified against a reference.
+        patres = max(1, round(vm.get(args[5]))) if len(args) == 6 else 1
+
+        had_x = "X" in vm.vars
+        old_x = vm.vars.get("X")
+
+        try:
+            for px in range(0, PIXEL_COLS, patres):
+                x, _ = graph.to_coord(px, 0)
+                if not (xmin <= x <= xmax):
+                    continue
+
+                vm.set_var("X", x)
+
+                lo = vm.get(ylower)
+                hi = vm.get(yupper)
+                if lo > hi:
+                    continue
+
+                lo = max(lo, graph.ymin)
+                hi = min(hi, graph.ymax)
+                if lo > hi:
+                    continue
+
+                p_lo = graph.to_pixel(x, lo)
+                p_hi = graph.to_pixel(x, hi)
+                if p_lo is None or p_hi is None:
+                    continue
+
+                py_top, py_bottom = sorted((p_lo[1], p_hi[1]))
+                for py in range(py_top, py_bottom + 1):
+                    graph.set_pixel(px, py, True)
+        finally:
+            if had_x:
+                vm.vars["X"] = old_x
+            else:
+                vm.vars.pop("X", None)
+
+        vm.io.draw_shade()
+
+
+class Text(Function):
+    def call(self, vm, args):
+        assert len(args) >= 3
+        row, col = args[0], args[1]
+
+        if (
+            not isinstance(row, int)
+            or not isinstance(col, int)
+            or not (0 <= row <= TEXT_MAX_ROW)
+            or not (0 <= col <= MAX_COL)
+        ):
+            raise ExecutionError("ERR:DOMAIN")
+
+        msg = "".join(
+            part if isinstance(part, str) else str(vm.disp_round(part))
+            for part in args[2:]
+        )
+
+        vm.io.draw_text_graph(row, col, msg)
 
 
 class Radian(Token):

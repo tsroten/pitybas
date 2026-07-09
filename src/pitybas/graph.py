@@ -11,6 +11,11 @@ PIXEL_ROWS = 63
 MAX_COL = PIXEL_COLS - 1
 MAX_ROW = PIXEL_ROWS - 1
 
+# Text( uses the same 95x63 grid as everything else, but a 6px-tall glyph
+# needs to fit inside the 63-row grid, so its row bound is tighter than the
+# general MAX_ROW.
+TEXT_MAX_ROW = PIXEL_ROWS - 6
+
 
 class GraphState:
     def __init__(self):
