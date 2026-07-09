@@ -3,10 +3,11 @@ import copy
 import pytest
 
 from pitybas.interpret import Interpreter
+from pitybas.io.base import IOBase
 from pitybas.parse import Parser
 
 
-class MockIO:
+class MockIO(IOBase):
     """An IO backend that records output and serves canned input, so tests
     can drive a program without touching stdin/stdout."""
 
@@ -16,12 +17,6 @@ class MockIO:
         self.outputs = []
         self.clears = 0
         self.inputs = list(inputs or [])
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        pass
 
     def clear(self):
         self.clears += 1

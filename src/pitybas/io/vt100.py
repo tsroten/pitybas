@@ -5,6 +5,7 @@ except ImportError:
 
 from pitybas.parse import Parser
 from pitybas.common import ParseError
+from pitybas.io.base import IOBase
 
 import select
 import sys
@@ -199,7 +200,7 @@ class VT:
 
             return ch
 
-class IO:
+class IO(IOBase):
     def __init__(self, vm):
         self.vm = vm
         self.vt = VT()
