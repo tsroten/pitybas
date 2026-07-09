@@ -83,7 +83,7 @@ import types
 import pytest
 
 from conftest import run
-from mock_io import MockIO
+from pitybas.io.scripted import ScriptedIO
 
 
 def disp_of(source):
@@ -125,12 +125,12 @@ def test_lcm_reduces_second_list_argument():
 
 
 def test_menu_entries_are_reusable_across_retries():
-    """Reproduces bug 7: a MockIO whose menu() re-iterates `entries` twice
+    """Reproduces bug 7: a ScriptedIO whose menu() re-iterates `entries` twice
     (as the real IO backends do on an invalid-choice retry) must see the
     same options both times."""
     from pitybas.interpret import Interpreter
 
-    class MenuIO(MockIO):
+    class MenuIO(ScriptedIO):
         def menu(self, menu):
             for title, entries in menu:
                 first_pass = list(entries)

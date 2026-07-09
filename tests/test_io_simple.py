@@ -1,6 +1,6 @@
 """Tests for pitybas.io.simple.IO, the default (non-vt100) IO backend.
-Existing tests only ever drive programs through MockIO (see
-mock_io.MockIO), so this real backend -- which talks to actual
+Existing tests only ever drive programs through ScriptedIO (see
+pitybas.io.scripted.ScriptedIO), so this real backend -- which talks to actual
 print()/input() -- had no direct coverage at all.
 """
 import pytest
