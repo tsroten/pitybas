@@ -292,10 +292,18 @@ class Parser:
 
     def add(self, token):
         # TODO: cannot add Pri.INVALID unless there's no expr on the stack
+        if isinstance(token, FunctionArgs):
+            # already linked to its owning Function/List/Matrix via the
+            # .absorb() call made when it was pushed onto the stack; adding
+            # it again here (e.g. via close_brackets() implicitly closing
+            # an unclosed call at end of line) would duplicate it as a
+            # sibling of its own owner.
+            return
+
         if self.stack:
             stack = self.stack[-1]
             stack.append(token)
-        elif not isinstance(token, FunctionArgs):
+        else:
             while self.line >= len(self.lines):
                 self.lines.append([])
 

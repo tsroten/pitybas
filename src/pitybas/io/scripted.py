@@ -19,6 +19,8 @@ class ScriptedIO(IOBase):
         disps: List of values passed to :meth:`disp`, in order.
         outputs: List of ``(row, col, msg)`` tuples passed to :meth:`output`.
         clears: Number of times :meth:`clear` was called.
+        draws: List of ``(px, py, on)`` tuples passed to :meth:`draw_pixel`.
+        clr_draws: Number of times :meth:`clr_draw` was called.
 
     Example::
 
@@ -40,6 +42,8 @@ class ScriptedIO(IOBase):
         self.disps = []
         self.outputs = []
         self.clears = 0
+        self.draws = []
+        self.clr_draws = 0
 
     def clear(self):
         self.clears += 1
@@ -80,3 +84,11 @@ class ScriptedIO(IOBase):
         choice = self.inputs.pop(0)
         lookup = [label for _, entries in menu for _, label in entries]
         return lookup[int(choice) - 1]
+
+    def draw_pixel(self, px, py, on):
+        """Record a graph-screen pixel change as a ``(px, py, on)`` tuple."""
+        self.draws.append((px, py, on))
+
+    def clr_draw(self):
+        """Record a graph-screen clear."""
+        self.clr_draws += 1

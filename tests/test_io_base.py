@@ -77,6 +77,12 @@ def test_iobase_enter_returns_self():
         def menu(self, menu):
             pass
 
+        def draw_pixel(self, px, py, on):
+            pass
+
+        def clr_draw(self):
+            pass
+
     vm = Interpreter.from_string("")
     obj = Concrete(vm)
     assert obj.__enter__() is obj
@@ -107,6 +113,12 @@ def test_iobase_exit_does_not_raise():
         def menu(self, menu):
             pass
 
+        def draw_pixel(self, px, py, on):
+            pass
+
+        def clr_draw(self):
+            pass
+
     vm = Interpreter.from_string("")
     obj = Concrete(vm)
     obj.__exit__(None, None, None)  # should not raise
@@ -135,6 +147,12 @@ def test_iobase_stores_vm():
             pass
 
         def menu(self, menu):
+            pass
+
+        def draw_pixel(self, px, py, on):
+            pass
+
+        def clr_draw(self):
             pass
 
     vm = Interpreter.from_string("")

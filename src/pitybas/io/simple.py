@@ -65,3 +65,9 @@ class IO(IOBase):
                 return label
             else:
                 print("invalid choice")
+
+    def draw_pixel(self, px, py, on):
+        pass
+
+    def clr_draw(self):
+        pass

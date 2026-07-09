@@ -42,12 +42,6 @@ def test_trig_bas_runs_with_prompted_input():
     assert vm.io.disps == [5, "Smaller than 11", 4, 5]
 
 
-@pytest.mark.skip(
-    reason=(
-        "circle.bas needs graph-screen functions (Pt-On) not implemented"
-        " by any IO backend; see README"
-    )
-)
 def test_circle_bas_runs_without_error():
     vm = make_vm(load("circle.bas"))
     vm.execute()

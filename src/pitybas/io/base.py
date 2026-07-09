@@ -65,3 +65,17 @@ class IOBase(ABC):
         Returns:
             The label string corresponding to the user's selection.
         """
+
+    @abstractmethod
+    def draw_pixel(self, px, py, on):
+        """Render a single graph-screen pixel changing state.
+
+        Args:
+            px: Pixel column, 0-94.
+            py: Pixel row, 0-62.
+            on: True if the pixel was turned on, False if turned off.
+        """
+
+    @abstractmethod
+    def clr_draw(self):
+        """Render the graph screen's drawn points/lines being cleared."""
