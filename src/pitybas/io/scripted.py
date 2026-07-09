@@ -57,6 +57,7 @@ class ScriptedIO(IOBase):
         return 0
 
     def output(self, row, col, msg):
+        """Record a positioned write as a ``(row, col, msg)`` tuple."""
         self.outputs.append((row, col, msg))
 
     def disp(self, msg=''):

@@ -55,7 +55,7 @@ Recorded attributes:
 | Attribute | Contents |
 |-----------|----------|
 | `disps`   | Values passed to `Disp`, in order |
-| `outputs` | `(row, col, msg)` tuples from `Output(` calls |
+| `outputs` | `(row, col, msg)` tuples from `Output()` calls |
 | `clears`  | Number of `ClrHome` calls |
 
 ## Known Limitations
