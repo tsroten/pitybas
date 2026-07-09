@@ -21,6 +21,10 @@ class ScriptedIO(IOBase):
         clears: Number of times :meth:`clear` was called.
         draws: List of ``(px, py, on)`` tuples passed to :meth:`draw_pixel`.
         clr_draws: Number of times :meth:`clr_draw` was called.
+        lines: List of ``(x1, y1, x2, y2, on)`` tuples passed to
+            :meth:`draw_line`.
+        circles: List of ``(x, y, r, on)`` tuples passed to
+            :meth:`draw_circle`.
 
     Example::
 
@@ -44,6 +48,8 @@ class ScriptedIO(IOBase):
         self.clears = 0
         self.draws = []
         self.clr_draws = 0
+        self.lines = []
+        self.circles = []
 
     def clear(self):
         self.clears += 1
@@ -92,3 +98,11 @@ class ScriptedIO(IOBase):
     def clr_draw(self):
         """Record a graph-screen clear."""
         self.clr_draws += 1
+
+    def draw_line(self, x1, y1, x2, y2, on):
+        """Record a Line(/Horizontal/Vertical draw as a tuple."""
+        self.lines.append((x1, y1, x2, y2, on))
+
+    def draw_circle(self, x, y, r, on):
+        """Record a Circle( draw as a tuple."""
+        self.circles.append((x, y, r, on))

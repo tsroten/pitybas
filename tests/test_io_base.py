@@ -83,6 +83,12 @@ def test_iobase_enter_returns_self():
         def clr_draw(self):
             pass
 
+        def draw_line(self, x1, y1, x2, y2, on):
+            pass
+
+        def draw_circle(self, x, y, r, on):
+            pass
+
     vm = Interpreter.from_string("")
     obj = Concrete(vm)
     assert obj.__enter__() is obj
@@ -119,6 +125,12 @@ def test_iobase_exit_does_not_raise():
         def clr_draw(self):
             pass
 
+        def draw_line(self, x1, y1, x2, y2, on):
+            pass
+
+        def draw_circle(self, x, y, r, on):
+            pass
+
     vm = Interpreter.from_string("")
     obj = Concrete(vm)
     obj.__exit__(None, None, None)  # should not raise
@@ -153,6 +165,12 @@ def test_iobase_stores_vm():
             pass
 
         def clr_draw(self):
+            pass
+
+        def draw_line(self, x1, y1, x2, y2, on):
+            pass
+
+        def draw_circle(self, x, y, r, on):
             pass
 
     vm = Interpreter.from_string("")

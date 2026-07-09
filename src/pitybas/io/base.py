@@ -79,3 +79,23 @@ class IOBase(ABC):
     @abstractmethod
     def clr_draw(self):
         """Render the graph screen's drawn points/lines being cleared."""
+
+    @abstractmethod
+    def draw_line(self, x1, y1, x2, y2, on):
+        """Render a Line(/Horizontal/Vertical draw in window coordinates.
+
+        Args:
+            x1, y1, x2, y2: Window-coordinate endpoints of the line, as
+                passed to the token (not clipped to the window).
+            on: True if the line was drawn, False if erased.
+        """
+
+    @abstractmethod
+    def draw_circle(self, x, y, r, on):
+        """Render a Circle( draw in window coordinates.
+
+        Args:
+            x, y, r: Window-coordinate center and radius, as passed to the
+                token (not clipped to the window).
+            on: True if the circle was drawn, False if erased.
+        """
