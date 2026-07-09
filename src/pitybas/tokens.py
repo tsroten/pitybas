@@ -9,16 +9,16 @@ from functools import reduce
 from .common import Pri, ExecutionError, StopError, ReturnError
 from .expression import Tuple, Expression, Arguments, ListExpr, MatrixExpr
 from .token_core import (
-    get,
-    Tracker,
+    Function,
     InvalidOperation,
     Parent,
     Stub,
-    Token,
-    StubToken,
-    Variable,
-    Function,
     StubFunction,
+    StubToken,
+    Token,
+    Tracker,
+    Variable,
+    get,
 )
 
 # helpers
