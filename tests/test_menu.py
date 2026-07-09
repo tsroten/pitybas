@@ -1,9 +1,9 @@
 from pitybas.interpret import Interpreter
-from conftest import MockIO
+from pitybas.io.scripted import ScriptedIO
 
 
 def make_menu_vm(source, menu_fn):
-    class RecordingIO(MockIO):
+    class RecordingIO(ScriptedIO):
         def menu(self, menu):
             return menu_fn(self, menu)
 
