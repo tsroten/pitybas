@@ -1770,6 +1770,33 @@ class Vertical(Token):
         draw_line(vm, x, vm.graph.ymin, x, vm.graph.ymax)
 
 
+class DrawF(Token):
+    absorbs = (Value, Expression)
+
+    def run(self, vm):
+        assert self.arg is not None
+        graph = vm.graph
+
+        had_x = "X" in vm.vars
+        old_x = vm.vars.get("X")
+
+        try:
+            for px in range(PIXEL_COLS):
+                x, _ = graph.to_coord(px, 0)
+                vm.set_var("X", x)
+
+                pixel = graph.to_pixel(x, vm.get(self.arg))
+                if pixel is not None:
+                    graph.set_pixel(pixel[0], pixel[1], True)
+        finally:
+            if had_x:
+                vm.vars["X"] = old_x
+            else:
+                del vm.vars["X"]
+
+        vm.io.draw_function()
+
+
 class Radian(Token):
     def run(self, vm):
         vm.degree_mode = False
@@ -1794,6 +1821,30 @@ class Fix(Token):
         assert arg >= 0
 
         vm.fixed = arg
+
+
+class AxesOn(Token):
+    def run(self, vm):
+        vm.graph.axes_on = True
+
+
+class AxesOff(Token):
+    def run(self, vm):
+        vm.graph.axes_on = False
+
+
+class ZStandard(Token):
+    def run(self, vm):
+        graph = vm.graph
+        graph.xmin, graph.xmax, graph.xscl = -10, 10, 1
+        graph.ymin, graph.ymax, graph.yscl = -10, 10, 1
+
+
+class ZDecimal(Token):
+    def run(self, vm):
+        graph = vm.graph
+        graph.xmin, graph.xmax, graph.xscl = -4.7, 4.7, 1
+        graph.ymin, graph.ymax, graph.yscl = -3.1, 3.1, 1
 
 
 class Disp(Token):
