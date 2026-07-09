@@ -285,11 +285,12 @@ class IO(IOBase):
         # Skip the wait on an unhandled exception so the traceback (printed
         # by cli.py after this exits) isn't gated behind a keypress, and
         # skip it if the graph is currently blank (nothing to protect).
-        if exc_type is None and any(any(row) for row in self.vm.graph.pixels):
-            while self.vt.getch() is None:
-                pass
-
-        self.vt.e("[?25h")
+        try:
+            if exc_type is None and any(any(row) for row in self.vm.graph.pixels):
+                while self.vt.getch() is None:
+                    pass
+        finally:
+            self.vt.e("[?25h")
 
     def clear(self):
         self.vt.clear()

@@ -523,6 +523,19 @@ def test_io_exit_skips_wait_on_unhandled_exception(io_obj, monkeypatch):
     io_obj.__exit__(ValueError, ValueError("boom"), None)  # should not raise
 
 
+def test_io_exit_restores_cursor_even_if_getch_raises(io_obj, monkeypatch, capsys):
+    # A Ctrl-C while holding the graph screen must not leave the terminal
+    # cursor hidden -- the show-cursor sequence has to run regardless of
+    # how the wait loop exits.
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    monkeypatch.setattr(
+        VT, "getch", lambda self: (_ for _ in ()).throw(KeyboardInterrupt)
+    )
+    with pytest.raises(KeyboardInterrupt):
+        io_obj.__exit__(None, None, None)
+    assert "\033[?25h" in capsys.readouterr().out
+
+
 # ── IO: clear ────────────────────────────────────────────────────────────────
 
 
