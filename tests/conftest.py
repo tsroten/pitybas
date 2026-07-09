@@ -5,7 +5,9 @@ from pitybas.io.scripted import ScriptedIO
 
 
 def make_vm(source, inputs=None, **kwargs):
-    return Interpreter.from_string(source, io=lambda vm: ScriptedIO(vm, inputs), **kwargs)
+    return Interpreter.from_string(
+        source, io=lambda vm: ScriptedIO(vm, inputs), **kwargs
+    )
 
 
 def run(source, inputs=None, **kwargs):

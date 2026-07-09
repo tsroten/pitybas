@@ -9,5 +9,5 @@ def test_core_token_types_are_re_exported():
 
 
 def test_dynamically_generated_variable_a_accessible():
-    assert hasattr(tokens, 'A')
+    assert hasattr(tokens, "A")
     assert issubclass(tokens.A, tokens.NumVar)

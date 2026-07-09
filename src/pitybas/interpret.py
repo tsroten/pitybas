@@ -12,6 +12,7 @@ from .common import ExecutionError, StopError, ReturnError
 from pitybas.io.simple import IO
 from .expression import Base
 
+
 class Interpreter(object):
     @classmethod
     def from_string(cls, string, *args, **kwargs):
@@ -20,13 +21,14 @@ class Interpreter(object):
 
     @classmethod
     def from_file(cls, filename, *args, **kwargs):
-        string = open(filename, 'r', encoding='utf8').read()
+        string = open(filename, "r", encoding="utf8").read()
         vm = Interpreter.from_string(string, *args, **kwargs)
         vm.name = os.path.basename(filename)
         return vm
 
     def __init__(self, code, history=10, io=None, name=None, strict=False):
-        if not io: io = IO
+        if not io:
+            io = IO
         self.io = io(self)
 
         self.name = name
@@ -69,14 +71,14 @@ class Interpreter(object):
         return self.cur()
 
     def inc_row(self):
-        self.line = min(self.line+1, len(self.code)-1)
+        self.line = min(self.line + 1, len(self.code) - 1)
         self.expression = None
         return self.cur()
 
     def get_var(self, var, default=None):
         if var not in self.vars:
             if self.strict:
-                raise ExecutionError('ERR:UNDEFINED')
+                raise ExecutionError("ERR:UNDEFINED")
             if default is not None:
                 return default
         return self.vars[var]
@@ -107,22 +109,22 @@ class Interpreter(object):
         if block:
             self.blocks.append(block)
         else:
-            raise ExecutionError('tried to push an invalid block to the stack')
+            raise ExecutionError("tried to push an invalid block to the stack")
 
     def pop_block(self):
         if self.blocks:
             return self.blocks.pop()
         else:
-            raise ExecutionError('tried to pop an empty block stack')
+            raise ExecutionError("tried to pop an empty block stack")
 
     def find(self, *types, **kwargs):
-        if 'wrap' in kwargs:
-            wrap = kwargs['wrap']
+        if "wrap" in kwargs:
+            wrap = kwargs["wrap"]
         else:
             wrap = False
 
-        if 'pos' in kwargs:
-            pos = kwargs['pos']
+        if "pos" in kwargs:
+            pos = kwargs["pos"]
         else:
             pos = self.line
 
@@ -135,20 +137,21 @@ class Interpreter(object):
 
         for i in range(pos, len(self.code)):
             ret = y(i)
-            if ret: yield ret
+            if ret:
+                yield ret
 
         if wrap:
             for i in range(0, pos):
                 ret = y(i)
-                if ret: yield ret
+                if ret:
+                    yield ret
 
     def goto(self, row, col):
-        if row >= 0 and row < len(self.code)\
-            and col >= 0 and col < len(self.code[row]):
-                self.line = row
-                self.col = col
+        if row >= 0 and row < len(self.code) and col >= 0 and col < len(self.code[row]):
+            self.line = row
+            self.col = col
         else:
-            raise ExecutionError('cannot goto (%i, %i)' % (row, col))
+            raise ExecutionError("cannot goto (%i, %i)" % (row, col))
 
     def get(self, *var):
         ret = []
@@ -182,7 +185,7 @@ class Interpreter(object):
 
     def run(self, cur):
         self.history.append((self.line, self.col, cur))
-        self.history = self.history[-self.hist_len:]
+        self.history = self.history[-self.hist_len :]
 
         cur.line, cur.col = self.line, self.col
 
@@ -193,10 +196,10 @@ class Interpreter(object):
             self.running.pop()
         elif cur.can_get:
             self.inc()
-            self.set_var('Ans', cur.get(self))
+            self.set_var("Ans", cur.get(self))
             self.serial = time.time()
         else:
-            raise ExecutionError('cannot seem to run token: %s' % cur)
+            raise ExecutionError("cannot seem to run token: %s" % cur)
 
     def execute(self):
         with self.io:
@@ -207,15 +210,15 @@ class Interpreter(object):
             except StopError as e:
                 if e.args:
                     print()
-                    print('Stopped:', e.args[0])
+                    print("Stopped:", e.args[0])
             except ReturnError as e:
                 if e.args:
                     print()
-                    print('Returned:', e.args[0])
+                    print("Returned:", e.args[0])
 
     def print_tokens(self):
         for line in self.code:
-            print((', '.join(repr(n) for n in line)).replace("u'", "'"))
+            print((", ".join(repr(n) for n in line)).replace("u'", "'"))
 
     def print_ast(self, start=0, end=None, highlight=None):
         if end is None:
@@ -224,48 +227,53 @@ class Interpreter(object):
         for i in range(max(start, 0), min(end, len(self.code))):
             line = self.code[i]
             if highlight is not None and i == highlight - 1:
-                print('>>>> {}'.format(line))
+                print(">>>> {}".format(line))
             else:
-                print('{:3}: {}'.format(i, line))
+                print("{:3}: {}".format(i, line))
 
     def print_stacktrace(self, num=None, vardump=False):
         if not num:
             num = self.hist_len
 
         if self.name:
-            print('-===[ Dumping {} ]===-'.format(self.name))
+            print("-===[ Dumping {} ]===-".format(self.name))
 
         if self.history:
             print()
-            print('-===[ Stacktrace ]===-')
+            print("-===[ Stacktrace ]===-")
 
         for row, col, cur in self.history[-num:]:
-            print(('[{}, {}]:'.format(row, col)).ljust(9), repr(cur).replace("u'", '').replace("'", ''))
+            print(
+                ("[{}, {}]:".format(row, col)).ljust(9),
+                repr(cur).replace("u'", "").replace("'", ""),
+            )
 
         if self.history:
             print()
 
-        print('-===[ Code (row {}, col {}) ]===-'.format(self.line, self.col))
+        print("-===[ Code (row {}, col {}) ]===-".format(self.line, self.col))
         h = num // 2
         self.print_ast(self.line - h, self.line + h, highlight=self.line)
         print()
 
         if vardump:
             print()
-            print('-===[ Variable Dump ]===-')
+            print("-===[ Variable Dump ]===-")
             import pprint
+
             pprint.pprint(self.vars)
             print()
 
     def run_prgm(self, name):
-        for ref in os.listdir('.'):
-            if ref.endswith('.bas'):
-                test = ref.rsplit('.', 1)[0]
+        for ref in os.listdir("."):
+            if ref.endswith(".bas"):
+                test = ref.rsplit(".", 1)[0]
                 if test.lower() == name.lower():
                     sub = Interpreter.from_file(ref)
                     sub.execute()
                     return
-        raise ExecutionError('prgm{} not found'.format(name))
+        raise ExecutionError("prgm{} not found".format(name))
+
 
 class Repl(Interpreter):
     def __init__(self, code=[], **kwargs):
@@ -278,5 +286,5 @@ class Repl(Interpreter):
                 super(Repl, self).execute()
             except ParseError as e:
                 print(e)
-            except:
+            except Exception:
                 print(traceback.format_exc())

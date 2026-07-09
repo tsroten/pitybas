@@ -46,11 +46,11 @@ class IOBase(ABC):
         """Write *msg* at the given *row* and *col* on the display."""
 
     @abstractmethod
-    def disp(self, msg=''):
+    def disp(self, msg=""):
         """Display *msg* as a line of output."""
 
     @abstractmethod
-    def pause(self, msg=''):
+    def pause(self, msg=""):
         """Optionally display *msg*, then wait for the user to press Enter."""
 
     @abstractmethod

@@ -1,5 +1,5 @@
 try:
-    import readline
+    import readline  # noqa: F401
 except ImportError:
     pass
 
@@ -14,47 +14,49 @@ import time
 import tty
 
 keycodes = {
-    'left': 24,
-    'up': 25,
-    'right': 26,
-    'down': 34,
-    'A': 41,
-    'B': 42,
-    'C': 43,
-    'D': 51,
-    'E': 52,
-    'F': 53,
-    'G': 54,
-    'H': 55,
-    'I': 61,
-    'J': 62,
-    'K': 63,
-    'L': 64,
-    'M': 65,
-    'N': 71,
-    'O': 72,
-    'P': 73,
-    'Q': 74,
-    'R': 75,
-    'S': 81,
-    'T': 82,
-    'U': 83,
-    'V': 84,
-    'W': 85,
-    'X': 91,
-    'Y': 92,
-    'Z': 93,
+    "left": 24,
+    "up": 25,
+    "right": 26,
+    "down": 34,
+    "A": 41,
+    "B": 42,
+    "C": 43,
+    "D": 51,
+    "E": 52,
+    "F": 53,
+    "G": 54,
+    "H": 55,
+    "I": 61,
+    "J": 62,
+    "K": 63,
+    "L": 64,
+    "M": 65,
+    "N": 71,
+    "O": 72,
+    "P": 73,
+    "Q": 74,
+    "R": 75,
+    "S": 81,
+    "T": 82,
+    "U": 83,
+    "V": 84,
+    "W": 85,
+    "X": 91,
+    "Y": 92,
+    "Z": 93,
     '"': 95,
-    ' ': 102,
-    ':': 103,
-    '?': 104,
-    'enter': 105
+    " ": 102,
+    ":": 103,
+    "?": 104,
+    "enter": 105,
 }
 
+
 class Delayed:
-    '''
+    """
     ensure at least duration time between __enter__ and __exit__
-    '''
+    """
+
     def __init__(self, duration):
         self.duration = duration
 
@@ -66,6 +68,7 @@ class Delayed:
         if diff > 0:
             time.sleep(diff)
 
+
 class SafeIO:
     def __init__(self, fd):
         self.fd = fd
@@ -75,6 +78,7 @@ class SafeIO:
 
     def __exit__(self, *args):
         termios.tcsetattr(self.fd, termios.TCSANOW, self.old)
+
 
 class VT:
     def __init__(self, width=16, height=8):
@@ -93,29 +97,29 @@ class VT:
 
     def e(self, *seqs):
         for seq in seqs:
-            sys.stdout.write('\033'+seq)
+            sys.stdout.write("\033" + seq)
 
     def clear(self, reset=True):
-        self.e('[2J', '[H')
+        self.e("[2J", "[H")
         self.row, self.col = 1, 1
         if reset:
             self.lines = []
             for i in range(self.height):
-                self.lines.append([' ']*self.width)
+                self.lines.append([" "] * self.width)
 
     def scroll(self):
         self.lines.pop(0)
-        self.lines.append([' ']*self.width)
+        self.lines.append([" "] * self.width)
         self.row = max(1, self.row - 1)
 
     def flush(self):
         self.clear(reset=False)
-        data = '\n'.join(''.join(line) for line in self.lines) + '\n'
+        data = "\n".join("".join(line) for line in self.lines) + "\n"
         sys.stdout.write(data)
 
     def move(self, row, col):
         self.row, self.col = row, col
-        self.e('[%i;%iH' % (row, col))
+        self.e("[%i;%iH" % (row, col))
 
     def wrap(self, msg):
         msg = str(msg)
@@ -123,14 +127,14 @@ class VT:
         first, msg = msg[:first], msg[first:]
         lines = [first]
         while msg:
-            lines.append(msg[:self.width])
-            msg = msg[self.width:]
+            lines.append(msg[: self.width])
+            msg = msg[self.width :]
 
         return lines
 
     def write(self, msg, scroll=True):
         row, col = self.row, self.col
-        self.e('[%i;%iH' % (row, col))
+        self.e("[%i;%iH" % (row, col))
 
         for line in self.wrap(msg):
             if row > self.height:
@@ -145,24 +149,24 @@ class VT:
                     break
 
             for char in line:
-                self.lines[row-1][col-1] = char
+                self.lines[row - 1][col - 1] = char
                 sys.stdout.write(char)
                 col += 1
 
             col = 1
             row += 1
-            sys.stdout.write('\n')
+            sys.stdout.write("\n")
 
         self.row, self.col = row, col
 
     def output(self, row, col, msg):
-        self.e('7')
+        self.e("7")
         old = self.row, self.col
         self.move(row, col)
         self.write(msg)
 
         self.row, self.col = old
-        self.e('8')
+        self.e("8")
 
     def getch(self):
         fd = sys.stdin.fileno()
@@ -176,29 +180,30 @@ class VT:
                 return
 
             ch = sys.stdin.read(1)
-            if ch == '\003':
+            if ch == "\003":
                 raise KeyboardInterrupt
 
-            if ch in ('\r', '\n'):
-                return 'enter'
+            if ch in ("\r", "\n"):
+                return "enter"
 
-            if ch == '\033':
+            if ch == "\033":
                 # control sequence
                 ch = sys.stdin.read(1)
-                if ch == '[':
+                if ch == "[":
                     ch = sys.stdin.read(1)
-                    if ch == 'A':
-                        return 'up'
-                    elif ch == 'B':
-                        return 'down'
-                    elif ch == 'C':
-                        return 'right'
-                    elif ch == 'D':
-                        return 'left'
+                    if ch == "A":
+                        return "up"
+                    elif ch == "B":
+                        return "down"
+                    elif ch == "C":
+                        return "right"
+                    elif ch == "D":
+                        return "left"
 
                 return None
 
             return ch
+
 
 class IO(IOBase):
     def __init__(self, vm):
@@ -206,11 +211,11 @@ class IO(IOBase):
         self.vt = VT()
 
     def __enter__(self):
-        self.vt.e('[?25l')
+        self.vt.e("[?25l")
         return self
 
     def __exit__(self, *args):
-        self.vt.e('[?25h')
+        self.vt.e("[?25h")
 
     def clear(self):
         self.vt.clear()
@@ -223,11 +228,11 @@ class IO(IOBase):
                 self.vt.move(9, 1)
 
                 if msg:
-                    print(msg, end=' ')
+                    print(msg, end=" ")
 
-                self.vt.e('[?25h')
+                self.vt.e("[?25h")
                 line = input()
-                self.vt.e('[?25l')
+                self.vt.e("[?25l")
 
                 self.vt.flush()
                 self.vt.pop()
@@ -238,7 +243,7 @@ class IO(IOBase):
 
                 return val
             except ParseError:
-                print('ERR:DATA')
+                print("ERR:DATA")
                 print()
 
     def getkey(self):
@@ -252,15 +257,16 @@ class IO(IOBase):
         self.vt.output(row, col, msg)
         self.vt.flush()
 
-    def disp(self, msg=''):
+    def disp(self, msg=""):
         if isinstance(msg, (complex, int, float)):
             msg = str(msg).rjust(16)
 
         self.vt.write(msg)
 
-    def pause(self, msg=''):
-        if msg: self.disp(msg)
-        self.input('[press enter]', True)
+    def pause(self, msg=""):
+        if msg:
+            self.disp(msg)
+        self.input("[press enter]", True)
 
     def menu(self, menu):
         # menu is a tuple of (title, [(desc, label)]) -- title/desc are
@@ -274,19 +280,19 @@ class IO(IOBase):
             i = 1
 
             for title, entries in menu:
-                print('-[ %s ]-' % title)
+                print("-[ %s ]-" % title)
                 for name, label in entries:
-                    print('%i: %s' % (i, name))
+                    print("%i: %s" % (i, name))
                     lookup.append(label)
                     i += 1
 
-            self.vt.e('[?25h')
-            choice = input('choice? ')
-            self.vt.e('[?25l')
+            self.vt.e("[?25h")
+            choice = input("choice? ")
+            self.vt.e("[?25l")
             print()
             if choice.isdigit() and 0 < int(choice) <= len(lookup):
-                label = lookup[int(choice)-1]
+                label = lookup[int(choice) - 1]
                 self.vt.flush()
                 return label
             else:
-                print('invalid choice')
+                print("invalid choice")

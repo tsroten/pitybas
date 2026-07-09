@@ -12,32 +12,34 @@ def get(f):
 
 class Tracker(type):
     def __new__(self, name, bases, attrs):
-        if 'token' not in attrs:
-            attrs['token'] = name
+        if "token" not in attrs:
+            attrs["token"] = name
 
-        attrs.update({
-            'can_run': False,
-            'can_get': False,
-            'can_set': False,
-            'can_fill_left': False,
-            'can_fill_right': False
-        })
+        attrs.update(
+            {
+                "can_run": False,
+                "can_get": False,
+                "can_set": False,
+                "can_fill_left": False,
+                "can_fill_right": False,
+            }
+        )
 
         cls = type.__new__(self, name, bases, attrs)
 
-        if 'run' in dir(cls):
+        if "run" in dir(cls):
             cls.can_run = True
 
-        if 'get' in dir(cls):
+        if "get" in dir(cls):
             cls.can_get = True
 
-        if 'set' in dir(cls):
+        if "set" in dir(cls):
             cls.can_set = True
 
-        if 'fill_left' in dir(cls):
+        if "fill_left" in dir(cls):
             cls.can_fill_left = True
 
-        if 'fill_right' in dir(cls):
+        if "fill_right" in dir(cls):
             cls.can_fill_right = True
 
         return cls
@@ -54,8 +56,8 @@ class InvalidOperation(Exception):
 class Parent(metaclass=Tracker):
     @classmethod
     def add(cls, sub, name, attrs):
-        if 'token' in attrs:
-            name = attrs['token']
+        if "token" in attrs:
+            name = attrs["token"]
 
         if name and not cls == Parent:
             cls.tokens[name] = sub
@@ -106,7 +108,8 @@ class Parent(metaclass=Tracker):
 
 class Stub:
     @classmethod
-    def add(cls, sub, name, attrs): pass
+    def add(cls, sub, name, attrs):
+        pass
 
 
 class Token(Parent):
@@ -117,13 +120,14 @@ class Token(Parent):
 
     def __repr__(self):
         if self.arg:
-            return '%s %s' % (repr(self.token), repr(self.arg))
+            return "%s %s" % (repr(self.token), repr(self.arg))
         else:
             return repr(self.token)
 
 
 class StubToken(Token, Stub):
-    def run(self, vm): pass
+    def run(self, vm):
+        pass
 
 
 class Variable(Parent):
@@ -142,11 +146,11 @@ class Function(Parent):
 
     @classmethod
     def add(cls, sub, name, attrs):
-        if 'token' in attrs:
-            name = attrs['token']
+        if "token" in attrs:
+            name = attrs["token"]
 
         if name:
-            name += '('
+            name += "("
             cls.tokens[name] = sub
 
     def __init__(self):
@@ -163,10 +167,11 @@ class Function(Parent):
 
     def __repr__(self):
         if self.arg:
-            return '%s%s' % (repr(self.token), repr(self.arg).replace('A', '', 1))
+            return "%s%s" % (repr(self.token), repr(self.arg).replace("A", "", 1))
         else:
-            return '%s()' % repr(self.token)
+            return "%s()" % repr(self.token)
 
 
 class StubFunction(Function, Stub):
-    def call(self, vm, args): pass
+    def call(self, vm, args):
+        pass

@@ -23,8 +23,8 @@ def test_menu_title_and_descriptions_are_evaluated_display_strings():
 
     def menu_fn(io, menu):
         for title, entries in menu:
-            captured['title'] = title
-            captured['descs'] = [desc for desc, _ in entries]
+            captured["title"] = title
+            captured["descs"] = [desc for desc, _ in entries]
         return entries[0][1]
 
     make_menu_vm(
@@ -32,8 +32,8 @@ def test_menu_title_and_descriptions_are_evaluated_display_strings():
         menu_fn,
     )
 
-    assert captured['title'] == 'TITLE'
-    assert captured['descs'] == ['OPT1', 'OPT2']
+    assert captured["title"] == "TITLE"
+    assert captured["descs"] == ["OPT1", "OPT2"]
 
 
 def test_menu_label_stays_an_unevaluated_token_for_goto():
@@ -45,12 +45,13 @@ def test_menu_label_stays_an_unevaluated_token_for_goto():
         'Menu("TITLE","OPT1",A,"OPT2",B)\nDisp "no\nLbl A\nDisp "yes',
         lambda io, menu: next(iter(menu))[1][0][1],
     )
-    assert vm.io.disps == ['yes']
+    assert vm.io.disps == ["yes"]
 
 
 def test_menu_choosing_second_option_reaches_its_label():
     vm = make_menu_vm(
-        'Menu("TITLE","OPT1",A,"OPT2",B)\nDisp "no\nLbl A\nDisp "wrong\nLbl B\nDisp "right',
+        'Menu("TITLE","OPT1",A,"OPT2",B)\nDisp "no\nLbl A\nDisp "wrong'
+        '\nLbl B\nDisp "right',
         lambda io, menu: next(iter(menu))[1][1][1],
     )
-    assert vm.io.disps == ['right']
+    assert vm.io.disps == ["right"]
