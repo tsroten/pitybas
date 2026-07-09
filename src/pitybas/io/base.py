@@ -127,3 +127,7 @@ class IOBase(ABC):
             col: Pixel column, 0-94.
             on: The pixel's new state after the toggle.
         """
+
+    @abstractmethod
+    def draw_function(self):
+        """Render a DrawF plot of the graph screen's pixel buffer."""

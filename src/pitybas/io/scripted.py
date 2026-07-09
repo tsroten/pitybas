@@ -27,6 +27,7 @@ class ScriptedIO(IOBase):
             :meth:`draw_circle`.
         pxls: List of ``(row, col, on)`` tuples passed to :meth:`pxl_on`,
             :meth:`pxl_off`, and :meth:`pxl_change`.
+        draw_fs: Number of times :meth:`draw_function` was called.
 
     Example::
 
@@ -53,6 +54,7 @@ class ScriptedIO(IOBase):
         self.lines = []
         self.circles = []
         self.pxls = []
+        self.draw_fs = 0
 
     def clear(self):
         self.clears += 1
@@ -121,3 +123,7 @@ class ScriptedIO(IOBase):
     def pxl_change(self, row, col, on):
         """Record a Pxl-Change( as a ``(row, col, on)`` tuple."""
         self.pxls.append((row, col, on))
+
+    def draw_function(self):
+        """Record a DrawF plot."""
+        self.draw_fs += 1

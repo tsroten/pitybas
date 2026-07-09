@@ -810,3 +810,10 @@ def test_io_pxl_change_repaints_from_graph_pixels(io_obj, capsys):
     io_obj.pxl_change(0, 0, True)
     out = capsys.readouterr().out
     assert chr(BRAILLE_BASE + 0x01) in out
+
+
+def test_io_draw_function_repaints_from_graph_pixels(io_obj, capsys):
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_function()
+    out = capsys.readouterr().out
+    assert chr(BRAILLE_BASE + 0x01) in out
