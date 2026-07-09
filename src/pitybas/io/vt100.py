@@ -391,10 +391,10 @@ class IO(IOBase):
         self._paint_graph()
 
     def pxl_on(self, row, col):
-        pass
+        self._paint_graph()
 
     def pxl_off(self, row, col):
-        pass
+        self._paint_graph()
 
     def pxl_change(self, row, col, on):
-        pass
+        self._paint_graph()

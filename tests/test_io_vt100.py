@@ -784,3 +784,29 @@ def test_io_draw_circle_repaints_from_graph_pixels(io_obj, capsys):
     io_obj.draw_circle(0, 0, 5, True)
     out = capsys.readouterr().out
     assert chr(BRAILLE_BASE + 0x01) in out
+
+
+def test_io_pxl_on_repaints_graph_region(io_obj, capsys):
+    io_obj.vm.graph.set_pixel(0, 0, True)  # Pxl-On(row,col) -> set_pixel(col, row, ...)
+    io_obj.pxl_on(0, 0)
+    out = capsys.readouterr().out
+    assert ("\033[%i;1H" % IO.GRAPH_ROW) in out
+    assert chr(BRAILLE_BASE + 0x01) in out
+
+
+def test_io_pxl_off_repaints_graph_region(io_obj, capsys):
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.pxl_on(0, 0)
+    capsys.readouterr()
+
+    io_obj.vm.graph.set_pixel(0, 0, False)
+    io_obj.pxl_off(0, 0)
+    out = capsys.readouterr().out
+    assert chr(BRAILLE_BASE + 0x01) not in out
+
+
+def test_io_pxl_change_repaints_from_graph_pixels(io_obj, capsys):
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.pxl_change(0, 0, True)
+    out = capsys.readouterr().out
+    assert chr(BRAILLE_BASE + 0x01) in out
