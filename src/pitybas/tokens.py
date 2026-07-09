@@ -1540,14 +1540,26 @@ class ClrDraw(Token):
 GDB_ATTRS = ("xmin", "xmax", "xscl", "ymin", "ymax", "yscl", "axes_on")
 
 
+def pic_gdb_slot(vm, arg):
+    """Evaluate a StorePic/RecallPic/StoreGDB/RecallGDB slot argument.
+
+    Raises ERR:DOMAIN for anything other than an integer 0-9, matching how
+    other graph commands (e.g. Text() validate their arguments).
+    """
+    assert arg is not None
+    n = vm.get(arg)
+
+    if not isinstance(n, int) or not (0 <= n <= 9):
+        raise ExecutionError("ERR:DOMAIN")
+
+    return n
+
+
 class StorePic(Token):
     absorbs = (Value, Expression)
 
     def run(self, vm):
-        assert self.arg is not None
-        n = vm.get(self.arg)
-        assert 0 <= n <= 9
-
+        n = pic_gdb_slot(vm, self.arg)
         vm.pics[n] = [row[:] for row in vm.graph.pixels]
 
 
@@ -1555,9 +1567,7 @@ class RecallPic(Token):
     absorbs = (Value, Expression)
 
     def run(self, vm):
-        assert self.arg is not None
-        n = vm.get(self.arg)
-        assert 0 <= n <= 9
+        n = pic_gdb_slot(vm, self.arg)
 
         if n in vm.pics:
             vm.graph.pixels = [row[:] for row in vm.pics[n]]
@@ -1568,10 +1578,7 @@ class StoreGDB(Token):
     absorbs = (Value, Expression)
 
     def run(self, vm):
-        assert self.arg is not None
-        n = vm.get(self.arg)
-        assert 0 <= n <= 9
-
+        n = pic_gdb_slot(vm, self.arg)
         vm.gdbs[n] = {attr: getattr(vm.graph, attr) for attr in GDB_ATTRS}
 
 
@@ -1579,9 +1586,7 @@ class RecallGDB(Token):
     absorbs = (Value, Expression)
 
     def run(self, vm):
-        assert self.arg is not None
-        n = vm.get(self.arg)
-        assert 0 <= n <= 9
+        n = pic_gdb_slot(vm, self.arg)
 
         if n in vm.gdbs:
             for attr, value in vm.gdbs[n].items():

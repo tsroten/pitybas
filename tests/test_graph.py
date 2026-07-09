@@ -425,3 +425,10 @@ def test_recallgdb_on_unused_slot_is_a_no_op():
 def test_recallgdb_notifies_io_of_a_redraw():
     vm = run("StoreGDB 1\nRecallGDB 1")
     assert vm.io.clr_draws == 1
+
+
+@pytest.mark.parametrize("token", ["StorePic", "RecallPic", "StoreGDB", "RecallGDB"])
+@pytest.mark.parametrize("slot", ["-1", "10", "1.5"])
+def test_pic_gdb_tokens_raise_domain_error_for_invalid_slot(token, slot):
+    with pytest.raises(ExecutionError):
+        run("%s %s" % (token, slot))
