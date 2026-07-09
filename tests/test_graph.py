@@ -258,3 +258,49 @@ def test_pxl_on_rounds_non_integer_coordinates_instead_of_raising():
 def test_pxl_test_rounds_non_integer_coordinates_instead_of_raising():
     vm = run("Pxl-On(5.5,10.4\nDisp Pxl-Test(5.5,10.4)")
     assert vm.io.disps == [1]
+
+
+def test_drawf_plots_the_function_across_the_window():
+    vm = run("DrawF X")
+    assert vm.graph.get_pixel(0, 62) is True  # (-10, -10)
+    assert vm.graph.get_pixel(47, 31) is True  # (0, 0)
+    assert vm.graph.get_pixel(94, 0) is True  # (10, 10)
+
+
+def test_drawf_notifies_io_draw_function_hook():
+    vm = run("DrawF X")
+    assert vm.io.draw_fs == 1
+
+
+def test_drawf_restores_the_value_x_held_before_the_call():
+    vm = run("5->X\nDrawF X^2\nDisp X")
+    assert vm.io.disps == [5]
+
+
+def test_drawf_leaves_x_undefined_if_it_was_undefined_before_the_call():
+    vm = run("DrawF X")
+    assert "X" not in vm.vars
+
+
+def test_axes_off_then_on_toggles_graph_state():
+    vm = run("AxesOff")
+    assert vm.graph.axes_on is False
+
+    vm = run("AxesOff\nAxesOn")
+    assert vm.graph.axes_on is True
+
+
+def test_zstandard_resets_window_to_ti_standard():
+    vm = run("-5->Xmin\n5->Xmax\nZStandard")
+    assert (vm.graph.xmin, vm.graph.xmax, vm.graph.xscl) == (-10, 10, 1)
+    assert (vm.graph.ymin, vm.graph.ymax, vm.graph.yscl) == (-10, 10, 1)
+
+
+def test_zdecimal_sets_window_for_tenth_unit_pixel_spacing():
+    vm = run("ZDecimal")
+    assert (vm.graph.xmin, vm.graph.xmax, vm.graph.xscl) == (-4.7, 4.7, 1)
+    assert (vm.graph.ymin, vm.graph.ymax, vm.graph.yscl) == (-3.1, 3.1, 1)
+    # the real TI-83/84 ZDecimal window produces exactly 0.1 units/pixel
+    # across the 95x63 (94/62 max-index) pixel grid
+    assert (vm.graph.xmax - vm.graph.xmin) / 94 == pytest.approx(0.1)
+    assert (vm.graph.ymax - vm.graph.ymin) / 62 == pytest.approx(0.1)

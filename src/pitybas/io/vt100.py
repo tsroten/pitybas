@@ -426,3 +426,6 @@ class IO(IOBase):
 
     def pxl_change(self, row, col, on):
         self._paint_graph()
+
+    def draw_function(self):
+        self._paint_graph()

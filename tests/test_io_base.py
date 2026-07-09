@@ -98,6 +98,9 @@ def test_iobase_enter_returns_self():
         def pxl_change(self, row, col, on):
             pass
 
+        def draw_function(self):
+            pass
+
     vm = Interpreter.from_string("")
     obj = Concrete(vm)
     assert obj.__enter__() is obj
@@ -149,6 +152,9 @@ def test_iobase_exit_does_not_raise():
         def pxl_change(self, row, col, on):
             pass
 
+        def draw_function(self):
+            pass
+
     vm = Interpreter.from_string("")
     obj = Concrete(vm)
     obj.__exit__(None, None, None)  # should not raise
@@ -198,6 +204,9 @@ def test_iobase_stores_vm():
             pass
 
         def pxl_change(self, row, col, on):
+            pass
+
+        def draw_function(self):
             pass
 
     vm = Interpreter.from_string("")

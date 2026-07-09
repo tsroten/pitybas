@@ -86,3 +86,6 @@ class IO(IOBase):
 
     def pxl_change(self, row, col, on):
         pass
+
+    def draw_function(self):
+        pass
