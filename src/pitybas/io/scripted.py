@@ -28,6 +28,9 @@ class ScriptedIO(IOBase):
         pxls: List of ``(row, col, on)`` tuples passed to :meth:`pxl_on`,
             :meth:`pxl_off`, and :meth:`pxl_change`.
         draw_fs: Number of times :meth:`draw_function` was called.
+        shades: Number of times :meth:`draw_shade` was called.
+        texts: List of ``(row, col, msg)`` tuples passed to
+            :meth:`draw_text_graph`.
 
     Example::
 
@@ -55,6 +58,8 @@ class ScriptedIO(IOBase):
         self.circles = []
         self.pxls = []
         self.draw_fs = 0
+        self.shades = 0
+        self.texts = []
 
     def clear(self):
         self.clears += 1
@@ -127,3 +132,11 @@ class ScriptedIO(IOBase):
     def draw_function(self):
         """Record a DrawF plot."""
         self.draw_fs += 1
+
+    def draw_shade(self):
+        """Record a Shade( fill."""
+        self.shades += 1
+
+    def draw_text_graph(self, row, col, msg):
+        """Record a Text( call as a ``(row, col, msg)`` tuple."""
+        self.texts.append((row, col, msg))

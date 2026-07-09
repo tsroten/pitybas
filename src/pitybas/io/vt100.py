@@ -429,3 +429,13 @@ class IO(IOBase):
 
     def draw_function(self):
         self._paint_graph()
+
+    def draw_shade(self):
+        self._paint_graph()
+
+    def draw_text_graph(self, row, col, msg):
+        # Stub only: prototyping showed Braille's 2x4 dot resolution is too
+        # coarse for pixel-accurate glyph rendering (see THO-16). Real vt100
+        # text rendering -- stamping characters onto the nearest Braille
+        # cell -- belongs in a follow-up issue.
+        pass
