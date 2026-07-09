@@ -54,6 +54,19 @@ def test_to_coord_is_inverse_of_to_pixel_at_grid_corners():
     assert graph.to_coord(94, 62) == (10, -10)
 
 
+@pytest.mark.parametrize(
+    "xmin,xmax,ymin,ymax",
+    [(5, 5, -10, 10), (-10, 10, 5, 5), (5, 5, 5, 5)],
+)
+def test_to_pixel_returns_none_for_collapsed_window_instead_of_raising(
+    xmin, xmax, ymin, ymax
+):
+    graph = GraphState()
+    graph.xmin, graph.xmax = xmin, xmax
+    graph.ymin, graph.ymax = ymin, ymax
+    assert graph.to_pixel(xmin, ymin) is None
+
+
 def test_window_variables_default_to_ti_standard():
     vm = run("Disp Xmin\nDisp Xmax\nDisp Ymin\nDisp Ymax\nDisp Xscl\nDisp Yscl")
     assert vm.io.disps == [-10, 10, -10, 10, 1, 1]
