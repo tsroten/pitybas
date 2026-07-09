@@ -278,7 +278,17 @@ class IO(IOBase):
         self.vt.e("[?25l")
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Mirror a real TI-83/84: the last screen a program drew (here, the
+        # graph) stays up until the user dismisses it, rather than the
+        # process exiting straight back to the shell out from under it.
+        # Skip the wait on an unhandled exception so the traceback (printed
+        # by cli.py after this exits) isn't gated behind a keypress, and
+        # skip it if the graph is currently blank (nothing to protect).
+        if exc_type is None and any(any(row) for row in self.vm.graph.pixels):
+            while self.vt.getch() is None:
+                pass
+
         self.vt.e("[?25h")
 
     def clear(self):

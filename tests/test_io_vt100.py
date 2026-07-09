@@ -493,6 +493,36 @@ def test_io_exit_shows_cursor(io_obj, capsys):
     assert "\033[?25h" in capsys.readouterr().out
 
 
+def test_io_exit_does_not_wait_when_graph_is_blank(io_obj, monkeypatch):
+    # A program that never drew anything has nothing on the graph screen to
+    # protect, so exiting shouldn't block waiting for a keypress.
+    monkeypatch.setattr(VT, "getch", lambda self: (_ for _ in ()).throw(AssertionError))
+    io_obj.__exit__(None, None, None)  # should not raise
+
+
+def test_io_exit_waits_for_keypress_when_graph_has_content(io_obj, monkeypatch):
+    # Mirrors a real TI-83/84: the drawn graph stays up until dismissed
+    # instead of the process exiting straight back to the shell under it.
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    calls = []
+    monkeypatch.setattr(VT, "getch", lambda self: calls.append(1) or "enter")
+    io_obj.__exit__(None, None, None)
+    assert calls == [1]
+
+
+def test_io_exit_polls_getch_until_a_key_is_pressed(io_obj, monkeypatch):
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    responses = iter([None, None, "enter"])
+    monkeypatch.setattr(VT, "getch", lambda self: next(responses))
+    io_obj.__exit__(None, None, None)  # should not raise StopIteration
+
+
+def test_io_exit_skips_wait_on_unhandled_exception(io_obj, monkeypatch):
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    monkeypatch.setattr(VT, "getch", lambda self: (_ for _ in ()).throw(AssertionError))
+    io_obj.__exit__(ValueError, ValueError("boom"), None)  # should not raise
+
+
 # ── IO: clear ────────────────────────────────────────────────────────────────
 
 
