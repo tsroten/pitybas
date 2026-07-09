@@ -8,6 +8,6 @@ def test_core_token_types_are_re_exported():
     assert tokens.get is not None
 
 
-def test_dynamic_variable_class_remains_in_tokens_namespace():
+def test_dynamically_generated_variable_a_accessible():
     assert hasattr(tokens, 'A')
     assert issubclass(tokens.A, tokens.NumVar)
