@@ -188,3 +188,73 @@ def test_horizontal_outside_window_draws_nothing_without_raising():
     vm = run("Horizontal 20")
     assert not any(any(row) for row in vm.graph.pixels)
     assert vm.io.lines == [(-10, 20, 10, 20, True)]
+
+
+def test_pxl_on_sets_pixel_at_row_col_and_records_pxl_hook():
+    vm = run("Pxl-On(5,10")
+    assert vm.graph.get_pixel(10, 5) is True
+    assert vm.io.pxls == [(5, 10, True)]
+
+
+def test_pxl_on_argument_order_is_row_col_not_x_y():
+    # row=5, col=10 must set pixel (col=10, row=5), not (col=5, row=10) --
+    # this would fail if Pxl-On mistakenly used Pt-On's x,y order.
+    vm = run("Pxl-On(5,10")
+    assert vm.graph.get_pixel(10, 5) is True
+    assert vm.graph.get_pixel(5, 10) is False
+
+
+def test_pxl_off_clears_pixel_and_records_pxl_hook():
+    vm = run("Pxl-On(5,10\nPxl-Off(5,10")
+    assert vm.graph.get_pixel(10, 5) is False
+    assert vm.io.pxls == [(5, 10, True), (5, 10, False)]
+
+
+def test_pxl_change_toggles_pixel():
+    vm = run("Pxl-Change(5,10\nPxl-Change(5,10")
+    assert vm.graph.get_pixel(10, 5) is False
+    assert vm.io.pxls == [(5, 10, True), (5, 10, False)]
+
+
+def test_pxl_on_outside_grid_is_silently_skipped():
+    vm = run("Pxl-On(63,0\nPxl-On(0,95")
+    assert vm.io.pxls == []
+    assert not any(any(row) for row in vm.graph.pixels)
+
+
+def test_pxl_on_does_not_fire_the_pt_draw_hook():
+    vm = run("Pxl-On(5,10")
+    assert vm.io.draws == []
+
+
+def test_pxl_test_returns_1_when_pixel_is_on():
+    vm = run("Pxl-On(5,10\nDisp Pxl-Test(5,10)")
+    assert vm.io.disps == [1]
+
+
+def test_pxl_test_returns_0_when_pixel_is_off():
+    vm = run("Disp Pxl-Test(5,10)")
+    assert vm.io.disps == [0]
+
+
+def test_pxl_test_argument_order_is_row_col_not_x_y():
+    # only (row=5, col=10) is on; reading back (col=10, row=5) via Pxl-Test's
+    # row,col order must see it, while the transposed row,col must not.
+    vm = run("Pxl-On(5,10\nDisp Pxl-Test(5,10)\nDisp Pxl-Test(10,5)")
+    assert vm.io.disps == [1, 0]
+
+
+def test_pxl_test_outside_grid_returns_0_without_raising():
+    vm = run("Disp Pxl-Test(63,0)\nDisp Pxl-Test(0,95)")
+    assert vm.io.disps == [0, 0]
+
+
+def test_pxl_on_rounds_non_integer_coordinates_instead_of_raising():
+    vm = run("Pxl-On(5.5,10.4")
+    assert vm.graph.get_pixel(10, 6) is True
+    assert vm.io.pxls == [(6, 10, True)]
+
+
+def test_pxl_test_rounds_non_integer_coordinates_instead_of_raising():
+    vm = run("Pxl-On(5.5,10.4\nDisp Pxl-Test(5.5,10.4)")
+    assert vm.io.disps == [1]

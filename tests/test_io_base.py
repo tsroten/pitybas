@@ -89,6 +89,15 @@ def test_iobase_enter_returns_self():
         def draw_circle(self, x, y, r, on):
             pass
 
+        def pxl_on(self, row, col):
+            pass
+
+        def pxl_off(self, row, col):
+            pass
+
+        def pxl_change(self, row, col, on):
+            pass
+
     vm = Interpreter.from_string("")
     obj = Concrete(vm)
     assert obj.__enter__() is obj
@@ -131,6 +140,15 @@ def test_iobase_exit_does_not_raise():
         def draw_circle(self, x, y, r, on):
             pass
 
+        def pxl_on(self, row, col):
+            pass
+
+        def pxl_off(self, row, col):
+            pass
+
+        def pxl_change(self, row, col, on):
+            pass
+
     vm = Interpreter.from_string("")
     obj = Concrete(vm)
     obj.__exit__(None, None, None)  # should not raise
@@ -171,6 +189,15 @@ def test_iobase_stores_vm():
             pass
 
         def draw_circle(self, x, y, r, on):
+            pass
+
+        def pxl_on(self, row, col):
+            pass
+
+        def pxl_off(self, row, col):
+            pass
+
+        def pxl_change(self, row, col, on):
             pass
 
     vm = Interpreter.from_string("")

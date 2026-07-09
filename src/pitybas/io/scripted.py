@@ -25,6 +25,8 @@ class ScriptedIO(IOBase):
             :meth:`draw_line`.
         circles: List of ``(x, y, r, on)`` tuples passed to
             :meth:`draw_circle`.
+        pxls: List of ``(row, col, on)`` tuples passed to :meth:`pxl_on`,
+            :meth:`pxl_off`, and :meth:`pxl_change`.
 
     Example::
 
@@ -50,6 +52,7 @@ class ScriptedIO(IOBase):
         self.clr_draws = 0
         self.lines = []
         self.circles = []
+        self.pxls = []
 
     def clear(self):
         self.clears += 1
@@ -106,3 +109,15 @@ class ScriptedIO(IOBase):
     def draw_circle(self, x, y, r, on):
         """Record a Circle( draw as a tuple."""
         self.circles.append((x, y, r, on))
+
+    def pxl_on(self, row, col):
+        """Record a Pxl-On( as a ``(row, col, True)`` tuple."""
+        self.pxls.append((row, col, True))
+
+    def pxl_off(self, row, col):
+        """Record a Pxl-Off( as a ``(row, col, False)`` tuple."""
+        self.pxls.append((row, col, False))
+
+    def pxl_change(self, row, col, on):
+        """Record a Pxl-Change( as a ``(row, col, on)`` tuple."""
+        self.pxls.append((row, col, on))
