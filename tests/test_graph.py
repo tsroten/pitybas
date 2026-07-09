@@ -378,3 +378,50 @@ def test_text_shares_the_graph_screens_95_by_63_grid():
     # exactly GraphState's MAX_COL -- not a second coordinate system.
     assert TEXT_MAX_ROW == 57
     assert MAX_COL == 94
+
+
+def test_storepic_recallpic_round_trips_the_pixel_buffer():
+    vm = run("Pt-On(0,0\nStorePic 1\nClrDraw\nRecallPic 1")
+    px, py = vm.graph.to_pixel(0, 0)
+    assert vm.graph.get_pixel(px, py) is True
+
+
+def test_storepic_recallpic_slots_are_independent():
+    vm = run(
+        "Pt-On(0,0\nStorePic 1\nClrDraw\nPt-On(5,5\nStorePic 2\nClrDraw\nRecallPic 1"
+    )
+    on_px, on_py = vm.graph.to_pixel(0, 0)
+    off_px, off_py = vm.graph.to_pixel(5, 5)
+    assert vm.graph.get_pixel(on_px, on_py) is True
+    assert vm.graph.get_pixel(off_px, off_py) is False
+
+
+def test_recallpic_on_unused_slot_is_a_no_op():
+    vm = run("RecallPic 5")
+    assert not any(any(row) for row in vm.graph.pixels)
+    assert vm.io.clr_draws == 0
+
+
+def test_recallpic_notifies_io_of_a_redraw():
+    vm = run("Pt-On(0,0\nStorePic 1\nClrDraw\nRecallPic 1")
+    assert vm.io.clr_draws == 2  # ClrDraw, then RecallPic's redraw notification
+
+
+def test_storegdb_recallgdb_round_trips_window_variables():
+    vm = run(
+        "-5->Xmin\n5->Xmax\n2->Xscl\nAxesOff\nStoreGDB 3\n"
+        "0->Xmin\n1->Xmax\nAxesOn\nRecallGDB 3"
+    )
+    assert (vm.graph.xmin, vm.graph.xmax, vm.graph.xscl) == (-5, 5, 2)
+    assert vm.graph.axes_on is False
+
+
+def test_recallgdb_on_unused_slot_is_a_no_op():
+    vm = run("-5->Xmin\nRecallGDB 7")
+    assert vm.graph.xmin == -5
+    assert vm.io.clr_draws == 0
+
+
+def test_recallgdb_notifies_io_of_a_redraw():
+    vm = run("StoreGDB 1\nRecallGDB 1")
+    assert vm.io.clr_draws == 1

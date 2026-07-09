@@ -1534,6 +1534,61 @@ class ClrDraw(Token):
         vm.io.clr_draw()
 
 
+# Graph DataBase: the window variables that fully describe the current
+# viewing window, snapshotted by StoreGDB/RecallGDB. Extend this tuple to
+# include equation state once Y1-Y9 equations exist.
+GDB_ATTRS = ("xmin", "xmax", "xscl", "ymin", "ymax", "yscl", "axes_on")
+
+
+class StorePic(Token):
+    absorbs = (Value, Expression)
+
+    def run(self, vm):
+        assert self.arg is not None
+        n = vm.get(self.arg)
+        assert 0 <= n <= 9
+
+        vm.pics[n] = [row[:] for row in vm.graph.pixels]
+
+
+class RecallPic(Token):
+    absorbs = (Value, Expression)
+
+    def run(self, vm):
+        assert self.arg is not None
+        n = vm.get(self.arg)
+        assert 0 <= n <= 9
+
+        if n in vm.pics:
+            vm.graph.pixels = [row[:] for row in vm.pics[n]]
+            vm.io.clr_draw()
+
+
+class StoreGDB(Token):
+    absorbs = (Value, Expression)
+
+    def run(self, vm):
+        assert self.arg is not None
+        n = vm.get(self.arg)
+        assert 0 <= n <= 9
+
+        vm.gdbs[n] = {attr: getattr(vm.graph, attr) for attr in GDB_ATTRS}
+
+
+class RecallGDB(Token):
+    absorbs = (Value, Expression)
+
+    def run(self, vm):
+        assert self.arg is not None
+        n = vm.get(self.arg)
+        assert 0 <= n <= 9
+
+        if n in vm.gdbs:
+            for attr, value in vm.gdbs[n].items():
+                setattr(vm.graph, attr, value)
+            vm.io.clr_draw()
+
+
 class PtFunction(Function, Stub):
     # True to turn the point on, False to turn it off, None to toggle
     on = None
