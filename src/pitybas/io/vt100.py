@@ -268,8 +268,8 @@ class IO(IOBase):
         # token for Goto to resolve.
         # TODO: implement this in VT terms
 
-        lookup = []
         while True:
+            lookup = []
             self.vt.clear(reset=False)
             i = 1
 
