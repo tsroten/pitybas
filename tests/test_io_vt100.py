@@ -1,4 +1,5 @@
 """Tests for pitybas.io.vt100: keycodes, Delayed, SafeIO, VT, and IO."""
+
 import types
 
 import pytest
@@ -10,6 +11,7 @@ from pitybas.io.vt100 import Delayed, IO, SafeIO, VT, keycodes
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def vt(capsys):
     obj = VT()
@@ -19,60 +21,66 @@ def vt(capsys):
 
 @pytest.fixture
 def io_obj(capsys):
-    obj = IO(Interpreter.from_string(''))
+    obj = IO(Interpreter.from_string(""))
     capsys.readouterr()  # discard escape sequences emitted by VT.__init__
     return obj
 
 
 def _patch_tty(monkeypatch):
     """Suppress all terminal-control and timing calls used inside VT.getch."""
-    monkeypatch.setattr(vt100.termios, 'tcgetattr', lambda fd: None)
-    monkeypatch.setattr(vt100.termios, 'tcsetattr', lambda fd, when, attrs: None)
-    monkeypatch.setattr(vt100.tty, 'setraw', lambda fd: None)
-    monkeypatch.setattr(vt100.time, 'sleep', lambda _: None)
+    monkeypatch.setattr(vt100.termios, "tcgetattr", lambda fd: None)
+    monkeypatch.setattr(vt100.termios, "tcsetattr", lambda fd, when, attrs: None)
+    monkeypatch.setattr(vt100.tty, "setraw", lambda fd: None)
+    monkeypatch.setattr(vt100.time, "sleep", lambda _: None)
 
 
 def _patch_stdin_reads(monkeypatch, chars):
     """Patch sys.stdin so read(1) yields successive characters from *chars*."""
     it = iter(chars)
-    monkeypatch.setattr(vt100.select, 'select', lambda r, w, x, timeout: (r, [], []))
-    monkeypatch.setattr(vt100.sys, 'stdin', types.SimpleNamespace(
-        fileno=lambda: 0,
-        read=lambda n: next(it, ''),
-    ))
+    monkeypatch.setattr(vt100.select, "select", lambda r, w, x, timeout: (r, [], []))
+    monkeypatch.setattr(
+        vt100.sys,
+        "stdin",
+        types.SimpleNamespace(
+            fileno=lambda: 0,
+            read=lambda n: next(it, ""),
+        ),
+    )
 
 
 # ── keycodes ─────────────────────────────────────────────────────────────────
 
+
 def test_keycodes_enter():
-    assert keycodes['enter'] == 105
+    assert keycodes["enter"] == 105
 
 
 def test_keycodes_arrow_keys():
-    assert keycodes['left'] == 24
-    assert keycodes['up'] == 25
-    assert keycodes['right'] == 26
-    assert keycodes['down'] == 34
+    assert keycodes["left"] == 24
+    assert keycodes["up"] == 25
+    assert keycodes["right"] == 26
+    assert keycodes["down"] == 34
 
 
 def test_keycodes_letters():
-    assert keycodes['A'] == 41
-    assert keycodes['Z'] == 93
+    assert keycodes["A"] == 41
+    assert keycodes["Z"] == 93
 
 
 def test_keycodes_special_chars():
     assert keycodes['"'] == 95
-    assert keycodes[' '] == 102
-    assert keycodes[':'] == 103
-    assert keycodes['?'] == 104
+    assert keycodes[" "] == 102
+    assert keycodes[":"] == 103
+    assert keycodes["?"] == 104
 
 
 # ── Delayed ──────────────────────────────────────────────────────────────────
 
+
 def test_delayed_sleeps_remaining_time(monkeypatch):
     slept = []
-    monkeypatch.setattr(vt100.time, 'sleep', slept.append)
-    monkeypatch.setattr(vt100.time, 'time', iter([0.0, 0.05]).__next__)
+    monkeypatch.setattr(vt100.time, "sleep", slept.append)
+    monkeypatch.setattr(vt100.time, "time", iter([0.0, 0.05]).__next__)
 
     with Delayed(0.1):
         pass
@@ -83,8 +91,8 @@ def test_delayed_sleeps_remaining_time(monkeypatch):
 
 def test_delayed_does_not_sleep_when_already_elapsed(monkeypatch):
     slept = []
-    monkeypatch.setattr(vt100.time, 'sleep', slept.append)
-    monkeypatch.setattr(vt100.time, 'time', iter([0.0, 0.2]).__next__)
+    monkeypatch.setattr(vt100.time, "sleep", slept.append)
+    monkeypatch.setattr(vt100.time, "time", iter([0.0, 0.2]).__next__)
 
     with Delayed(0.1):
         pass
@@ -94,21 +102,26 @@ def test_delayed_does_not_sleep_when_already_elapsed(monkeypatch):
 
 # ── SafeIO ───────────────────────────────────────────────────────────────────
 
+
 def test_safeio_restores_terminal_settings(monkeypatch):
     saved = {}
     attrs = object()
-    monkeypatch.setattr(vt100.termios, 'tcgetattr', lambda fd: attrs)
-    monkeypatch.setattr(vt100.termios, 'tcsetattr',
-                        lambda fd, when, a: saved.update({'when': when, 'attrs': a}))
+    monkeypatch.setattr(vt100.termios, "tcgetattr", lambda fd: attrs)
+    monkeypatch.setattr(
+        vt100.termios,
+        "tcsetattr",
+        lambda fd, when, a: saved.update({"when": when, "attrs": a}),
+    )
 
     with SafeIO(0):
         pass
 
-    assert saved['attrs'] is attrs
-    assert saved['when'] == vt100.termios.TCSANOW
+    assert saved["attrs"] is attrs
+    assert saved["when"] == vt100.termios.TCSANOW
 
 
 # ── VT: __init__ ─────────────────────────────────────────────────────────────
+
 
 def test_vt_default_dimensions(capsys):
     vt = VT()
@@ -136,7 +149,7 @@ def test_vt_initial_lines_shape(capsys):
     capsys.readouterr()
     assert len(vt.lines) == 3
     assert all(len(line) == 4 for line in vt.lines)
-    assert all(ch == ' ' for line in vt.lines for ch in line)
+    assert all(ch == " " for line in vt.lines for ch in line)
 
 
 def test_vt_initial_pos_stack_is_empty(capsys):
@@ -146,6 +159,7 @@ def test_vt_initial_pos_stack_is_empty(capsys):
 
 
 # ── VT: push / pop ───────────────────────────────────────────────────────────
+
 
 def test_vt_push_pop_round_trips_position(vt):
     vt.row, vt.col = 3, 5
@@ -168,34 +182,36 @@ def test_vt_push_pop_lifo_order(vt):
 
 # ── VT: e ─────────────────────────────────────────────────────────────────────
 
+
 def test_vt_e_writes_single_escape_sequence(vt, capsys):
-    vt.e('[2J')
-    assert capsys.readouterr().out == '\033[2J'
+    vt.e("[2J")
+    assert capsys.readouterr().out == "\033[2J"
 
 
 def test_vt_e_writes_multiple_escape_sequences(vt, capsys):
-    vt.e('[2J', '[H')
-    assert capsys.readouterr().out == '\033[2J\033[H'
+    vt.e("[2J", "[H")
+    assert capsys.readouterr().out == "\033[2J\033[H"
 
 
 # ── VT: clear ────────────────────────────────────────────────────────────────
 
+
 def test_vt_clear_with_reset_reinitialises_lines(capsys):
     vt = VT(width=4, height=2)
     capsys.readouterr()
-    vt.lines[0][0] = 'X'
+    vt.lines[0][0] = "X"
     vt.clear(reset=True)
     capsys.readouterr()
-    assert vt.lines[0][0] == ' '
+    assert vt.lines[0][0] == " "
 
 
 def test_vt_clear_without_reset_preserves_lines(capsys):
     vt = VT(width=4, height=2)
     capsys.readouterr()
-    vt.lines[0][0] = 'X'
+    vt.lines[0][0] = "X"
     vt.clear(reset=False)
     capsys.readouterr()
-    assert vt.lines[0][0] == 'X'
+    assert vt.lines[0][0] == "X"
 
 
 def test_vt_clear_resets_cursor_to_origin(capsys):
@@ -213,22 +229,23 @@ def test_vt_clear_emits_erase_and_home_sequences(capsys):
     capsys.readouterr()
     vt.clear()
     out = capsys.readouterr().out
-    assert '\033[2J' in out
-    assert '\033[H' in out
+    assert "\033[2J" in out
+    assert "\033[H" in out
 
 
 # ── VT: scroll ───────────────────────────────────────────────────────────────
 
+
 def test_vt_scroll_removes_first_row_and_appends_blank(capsys):
     vt = VT(width=3, height=3)
     capsys.readouterr()
-    vt.lines[0] = list('ABC')
-    vt.lines[1] = list('DEF')
-    vt.lines[2] = list('GHI')
+    vt.lines[0] = list("ABC")
+    vt.lines[1] = list("DEF")
+    vt.lines[2] = list("GHI")
     vt.scroll()
-    assert vt.lines[0] == list('DEF')
-    assert vt.lines[1] == list('GHI')
-    assert vt.lines[2] == list('   ')
+    assert vt.lines[0] == list("DEF")
+    assert vt.lines[1] == list("GHI")
+    assert vt.lines[2] == list("   ")
 
 
 def test_vt_scroll_decrements_row(vt):
@@ -245,26 +262,28 @@ def test_vt_scroll_row_cannot_go_below_one(vt):
 
 # ── VT: flush ────────────────────────────────────────────────────────────────
 
+
 def test_vt_flush_writes_all_lines_to_stdout(capsys):
     vt = VT(width=3, height=2)
     capsys.readouterr()
-    vt.lines[0] = list('ABC')
-    vt.lines[1] = list('DEF')
+    vt.lines[0] = list("ABC")
+    vt.lines[1] = list("DEF")
     vt.flush()
     out = capsys.readouterr().out
-    assert 'ABC' in out
-    assert 'DEF' in out
+    assert "ABC" in out
+    assert "DEF" in out
 
 
 def test_vt_flush_preserves_lines_content(capsys):
     vt = VT(width=3, height=2)
     capsys.readouterr()
-    vt.lines[0] = list('XYZ')
+    vt.lines[0] = list("XYZ")
     vt.flush()
-    assert vt.lines[0] == list('XYZ')
+    assert vt.lines[0] == list("XYZ")
 
 
 # ── VT: move ─────────────────────────────────────────────────────────────────
+
 
 def test_vt_move_updates_row_and_col(vt, capsys):
     vt.move(3, 7)
@@ -275,34 +294,35 @@ def test_vt_move_updates_row_and_col(vt, capsys):
 def test_vt_move_emits_cursor_position_sequence(vt, capsys):
     vt.move(2, 5)
     out = capsys.readouterr().out
-    assert '\033[2;5H' in out
+    assert "\033[2;5H" in out
 
 
 # ── VT: wrap ─────────────────────────────────────────────────────────────────
+
 
 def test_vt_wrap_short_message_fits_on_one_line(capsys):
     vt = VT(width=10, height=5)
     capsys.readouterr()
     vt.col = 1
-    assert vt.wrap('hello') == ['hello']
+    assert vt.wrap("hello") == ["hello"]
 
 
 def test_vt_wrap_splits_at_width_boundary(capsys):
     vt = VT(width=5, height=5)
     capsys.readouterr()
     vt.col = 1
-    chunks = vt.wrap('ABCDEFGHIJ')
-    assert chunks[0] == 'ABCDE'
-    assert chunks[1] == 'FGHIJ'
+    chunks = vt.wrap("ABCDEFGHIJ")
+    assert chunks[0] == "ABCDE"
+    assert chunks[1] == "FGHIJ"
 
 
 def test_vt_wrap_accounts_for_current_column_offset(capsys):
     vt = VT(width=5, height=5)
     capsys.readouterr()
     vt.col = 3  # only 3 chars fit on the current row (cols 3, 4, 5)
-    chunks = vt.wrap('ABCDE')
-    assert chunks[0] == 'ABC'
-    assert chunks[1] == 'DE'
+    chunks = vt.wrap("ABCDE")
+    assert chunks[0] == "ABC"
+    assert chunks[1] == "DE"
 
 
 def test_vt_wrap_converts_non_string_to_str(capsys):
@@ -310,18 +330,19 @@ def test_vt_wrap_converts_non_string_to_str(capsys):
     capsys.readouterr()
     vt.col = 1
     chunks = vt.wrap(42)
-    assert chunks == ['42']
+    assert chunks == ["42"]
 
 
 # ── VT: write ────────────────────────────────────────────────────────────────
 
+
 def test_vt_write_stores_chars_in_lines(vt, capsys):
-    vt.write('hi')
-    assert vt.lines[0][:2] == list('hi')
+    vt.write("hi")
+    assert vt.lines[0][:2] == list("hi")
 
 
 def test_vt_write_advances_row_after_first_line(vt, capsys):
-    vt.write('AB')
+    vt.write("AB")
     # write always appends '\n' after each wrapped segment → row advances
     assert vt.row == 2
 
@@ -329,109 +350,112 @@ def test_vt_write_advances_row_after_first_line(vt, capsys):
 def test_vt_write_scrolls_when_row_exceeds_height(capsys):
     vt = VT(width=5, height=2)
     capsys.readouterr()
-    vt.write('12345')  # fills row 1; cursor moves to row 2
-    vt.write('ABCDE')  # fills row 2; cursor moves to row 3
-    vt.write('XXXXX')  # row 3 > height=2 → scroll occurs
+    vt.write("12345")  # fills row 1; cursor moves to row 2
+    vt.write("ABCDE")  # fills row 2; cursor moves to row 3
+    vt.write("XXXXX")  # row 3 > height=2 → scroll occurs
     # First row is discarded, old row-2 content promoted to row 1
-    assert vt.lines[0] == list('ABCDE')
-    assert vt.lines[1] == list('XXXXX')
+    assert vt.lines[0] == list("ABCDE")
+    assert vt.lines[1] == list("XXXXX")
 
 
 def test_vt_write_no_scroll_stops_at_height(capsys):
     vt = VT(width=5, height=2)
     capsys.readouterr()
-    vt.write('12345')  # row 1
-    vt.write('ABCDE')  # row 2; cursor → row 3
+    vt.write("12345")  # row 1
+    vt.write("ABCDE")  # row 2; cursor → row 3
     # Writing with scroll=False should not modify lines further
-    vt.write('XXXXX', scroll=False)
-    assert vt.lines[0] == list('12345')
-    assert vt.lines[1] == list('ABCDE')
+    vt.write("XXXXX", scroll=False)
+    assert vt.lines[0] == list("12345")
+    assert vt.lines[1] == list("ABCDE")
 
 
 # ── VT: output ───────────────────────────────────────────────────────────────
 
+
 def test_vt_output_writes_to_target_row_and_col(vt, capsys):
-    vt.output(2, 1, 'hi')
-    assert vt.lines[1][:2] == list('hi')
+    vt.output(2, 1, "hi")
+    assert vt.lines[1][:2] == list("hi")
 
 
 def test_vt_output_restores_cursor_position(vt, capsys):
     vt.row, vt.col = 1, 1
-    vt.output(3, 5, 'X')
+    vt.output(3, 5, "X")
     assert (vt.row, vt.col) == (1, 1)
 
 
 # ── VT: getch ────────────────────────────────────────────────────────────────
 
+
 def test_getch_returns_enter_for_carriage_return(monkeypatch):
     _patch_tty(monkeypatch)
-    _patch_stdin_reads(monkeypatch, '\r')
-    assert VT().getch() == 'enter'
+    _patch_stdin_reads(monkeypatch, "\r")
+    assert VT().getch() == "enter"
 
 
 def test_getch_returns_enter_for_newline(monkeypatch):
     _patch_tty(monkeypatch)
-    _patch_stdin_reads(monkeypatch, '\n')
-    assert VT().getch() == 'enter'
+    _patch_stdin_reads(monkeypatch, "\n")
+    assert VT().getch() == "enter"
 
 
 def test_getch_raises_keyboard_interrupt_for_ctrl_c(monkeypatch):
     _patch_tty(monkeypatch)
-    _patch_stdin_reads(monkeypatch, '\003')
+    _patch_stdin_reads(monkeypatch, "\003")
     with pytest.raises(KeyboardInterrupt):
         VT().getch()
 
 
 def test_getch_returns_up_for_escape_sequence(monkeypatch):
     _patch_tty(monkeypatch)
-    _patch_stdin_reads(monkeypatch, '\033[A')
-    assert VT().getch() == 'up'
+    _patch_stdin_reads(monkeypatch, "\033[A")
+    assert VT().getch() == "up"
 
 
 def test_getch_returns_down_for_escape_sequence(monkeypatch):
     _patch_tty(monkeypatch)
-    _patch_stdin_reads(monkeypatch, '\033[B')
-    assert VT().getch() == 'down'
+    _patch_stdin_reads(monkeypatch, "\033[B")
+    assert VT().getch() == "down"
 
 
 def test_getch_returns_right_for_escape_sequence(monkeypatch):
     _patch_tty(monkeypatch)
-    _patch_stdin_reads(monkeypatch, '\033[C')
-    assert VT().getch() == 'right'
+    _patch_stdin_reads(monkeypatch, "\033[C")
+    assert VT().getch() == "right"
 
 
 def test_getch_returns_left_for_escape_sequence(monkeypatch):
     _patch_tty(monkeypatch)
-    _patch_stdin_reads(monkeypatch, '\033[D')
-    assert VT().getch() == 'left'
+    _patch_stdin_reads(monkeypatch, "\033[D")
+    assert VT().getch() == "left"
 
 
 def test_getch_returns_none_for_unrecognised_escape_sequence(monkeypatch):
     _patch_tty(monkeypatch)
-    _patch_stdin_reads(monkeypatch, '\033X')
+    _patch_stdin_reads(monkeypatch, "\033X")
     assert VT().getch() is None
 
 
 def test_getch_returns_none_for_escape_bracket_without_arrow(monkeypatch):
     _patch_tty(monkeypatch)
-    _patch_stdin_reads(monkeypatch, '\033[Z')
+    _patch_stdin_reads(monkeypatch, "\033[Z")
     assert VT().getch() is None
 
 
 def test_getch_returns_none_when_no_input_available(monkeypatch):
     _patch_tty(monkeypatch)
-    monkeypatch.setattr(vt100.select, 'select', lambda r, w, x, timeout: ([], [], []))
-    monkeypatch.setattr(vt100.sys, 'stdin', types.SimpleNamespace(fileno=lambda: 0))
+    monkeypatch.setattr(vt100.select, "select", lambda r, w, x, timeout: ([], [], []))
+    monkeypatch.setattr(vt100.sys, "stdin", types.SimpleNamespace(fileno=lambda: 0))
     assert VT().getch() is None
 
 
 def test_getch_returns_regular_character(monkeypatch):
     _patch_tty(monkeypatch)
-    _patch_stdin_reads(monkeypatch, 'k')
-    assert VT().getch() == 'k'
+    _patch_stdin_reads(monkeypatch, "k")
+    assert VT().getch() == "k"
 
 
 # ── IO: __init__ ─────────────────────────────────────────────────────────────
+
 
 def test_io_init_creates_vt_instance(io_obj):
     assert isinstance(io_obj.vt, VT)
@@ -443,21 +467,23 @@ def test_io_init_stores_vm(io_obj):
 
 # ── IO: __enter__ / __exit__ ─────────────────────────────────────────────────
 
+
 def test_io_enter_returns_self(io_obj, capsys):
     assert io_obj.__enter__() is io_obj
 
 
 def test_io_enter_hides_cursor(io_obj, capsys):
     io_obj.__enter__()
-    assert '\033[?25l' in capsys.readouterr().out
+    assert "\033[?25l" in capsys.readouterr().out
 
 
 def test_io_exit_shows_cursor(io_obj, capsys):
     io_obj.__exit__(None, None, None)
-    assert '\033[?25h' in capsys.readouterr().out
+    assert "\033[?25h" in capsys.readouterr().out
 
 
 # ── IO: clear ────────────────────────────────────────────────────────────────
+
 
 def test_io_clear_resets_vt_cursor_to_origin(io_obj, capsys):
     io_obj.vt.row, io_obj.vt.col = 5, 5
@@ -467,147 +493,154 @@ def test_io_clear_resets_vt_cursor_to_origin(io_obj, capsys):
 
 
 def test_io_clear_reinitialises_lines(io_obj, capsys):
-    io_obj.vt.lines[0][0] = 'X'
+    io_obj.vt.lines[0][0] = "X"
     io_obj.clear()
     capsys.readouterr()
-    assert io_obj.vt.lines[0][0] == ' '
+    assert io_obj.vt.lines[0][0] == " "
 
 
 # ── IO: input ────────────────────────────────────────────────────────────────
 
+
 def test_io_input_parses_expression(io_obj, monkeypatch):
-    monkeypatch.setattr('builtins.input', lambda: '2+3')
-    assert io_obj.input('val?') == 5
+    monkeypatch.setattr("builtins.input", lambda: "2+3")
+    assert io_obj.input("val?") == 5
 
 
 def test_io_input_returns_raw_string_when_is_str(io_obj, monkeypatch):
-    monkeypatch.setattr('builtins.input', lambda: 'hello')
-    assert io_obj.input('n?', is_str=True) == 'hello'
+    monkeypatch.setattr("builtins.input", lambda: "hello")
+    assert io_obj.input("n?", is_str=True) == "hello"
 
 
 def test_io_input_prints_message_to_stdout(io_obj, monkeypatch, capsys):
-    monkeypatch.setattr('builtins.input', lambda: '1')
-    io_obj.input('enter value?')
-    assert 'enter value?' in capsys.readouterr().out
+    monkeypatch.setattr("builtins.input", lambda: "1")
+    io_obj.input("enter value?")
+    assert "enter value?" in capsys.readouterr().out
 
 
 def test_io_input_silent_when_no_message(io_obj, monkeypatch, capsys):
-    monkeypatch.setattr('builtins.input', lambda: '7')
-    io_obj.input('')
+    monkeypatch.setattr("builtins.input", lambda: "7")
+    io_obj.input("")
     # With no message the 'if msg: print(msg, ...)' branch is skipped;
     # only escape sequences are written — strip them and expect nothing left.
     import re
+
     out = capsys.readouterr().out
-    text_only = re.sub(r'\x1b\[[^a-zA-Z]*[a-zA-Z]', '', out).strip()
-    assert text_only == ''
+    text_only = re.sub(r"\x1b\[[^a-zA-Z]*[a-zA-Z]", "", out).strip()
+    assert text_only == ""
 
 
 def test_io_input_reprompts_on_parse_error(io_obj, monkeypatch, capsys):
-    responses = iter(['@@@', '7'])
-    monkeypatch.setattr('builtins.input', lambda: next(responses))
-    assert io_obj.input('n?') == 7
-    assert 'ERR:DATA' in capsys.readouterr().out
+    responses = iter(["@@@", "7"])
+    monkeypatch.setattr("builtins.input", lambda: next(responses))
+    assert io_obj.input("n?") == 7
+    assert "ERR:DATA" in capsys.readouterr().out
 
 
 # ── IO: getkey ───────────────────────────────────────────────────────────────
 
+
 def test_io_getkey_returns_keycode_for_enter(io_obj, monkeypatch):
     _patch_tty(monkeypatch)
-    _patch_stdin_reads(monkeypatch, '\r')
+    _patch_stdin_reads(monkeypatch, "\r")
     assert io_obj.getkey() == 105
 
 
 def test_io_getkey_returns_zero_for_unknown_key(io_obj, monkeypatch):
     _patch_tty(monkeypatch)
-    _patch_stdin_reads(monkeypatch, '~')  # '~' is not in keycodes
+    _patch_stdin_reads(monkeypatch, "~")  # '~' is not in keycodes
     assert io_obj.getkey() == 0
 
 
 def test_io_getkey_returns_keycode_for_letter(io_obj, monkeypatch):
     _patch_tty(monkeypatch)
-    _patch_stdin_reads(monkeypatch, 'A')
-    assert io_obj.getkey() == keycodes['A']
+    _patch_stdin_reads(monkeypatch, "A")
+    assert io_obj.getkey() == keycodes["A"]
 
 
 def test_io_getkey_returns_zero_when_getch_returns_none(io_obj, monkeypatch):
     _patch_tty(monkeypatch)
-    monkeypatch.setattr(vt100.select, 'select', lambda r, w, x, timeout: ([], [], []))
-    monkeypatch.setattr(vt100.sys, 'stdin', types.SimpleNamespace(fileno=lambda: 0))
+    monkeypatch.setattr(vt100.select, "select", lambda r, w, x, timeout: ([], [], []))
+    monkeypatch.setattr(vt100.sys, "stdin", types.SimpleNamespace(fileno=lambda: 0))
     assert io_obj.getkey() == 0
 
 
 # ── IO: output ───────────────────────────────────────────────────────────────
 
+
 def test_io_output_writes_message_to_vt_lines(io_obj, capsys):
-    io_obj.output(1, 1, 'hi')
-    assert io_obj.vt.lines[0][:2] == list('hi')
+    io_obj.output(1, 1, "hi")
+    assert io_obj.vt.lines[0][:2] == list("hi")
 
 
 # ── IO: disp ─────────────────────────────────────────────────────────────────
 
+
 def test_io_disp_writes_string_to_vt(io_obj, capsys):
-    io_obj.disp('hello')
-    assert io_obj.vt.lines[0][:5] == list('hello')
+    io_obj.disp("hello")
+    assert io_obj.vt.lines[0][:5] == list("hello")
 
 
 def test_io_disp_right_justifies_integers(io_obj, capsys):
     io_obj.disp(42)
-    row_str = ''.join(io_obj.vt.lines[0])
-    assert row_str == '              42'
+    row_str = "".join(io_obj.vt.lines[0])
+    assert row_str == "              42"
 
 
 def test_io_disp_right_justifies_floats(io_obj, capsys):
     io_obj.disp(3.14)
-    row_str = ''.join(io_obj.vt.lines[0])
-    assert row_str.strip() == '3.14'
+    row_str = "".join(io_obj.vt.lines[0])
+    assert row_str.strip() == "3.14"
 
 
 def test_io_disp_defaults_to_empty_string(io_obj, capsys):
     io_obj.disp()
     # Writing '' should not modify any cell; all chars remain spaces
-    assert io_obj.vt.lines[0] == [' '] * 16
+    assert io_obj.vt.lines[0] == [" "] * 16
 
 
 # ── IO: pause ────────────────────────────────────────────────────────────────
 
+
 def test_io_pause_with_message_writes_it_to_vt(io_obj, monkeypatch, capsys):
-    monkeypatch.setattr('builtins.input', lambda: '')
-    io_obj.pause('waiting...')
-    all_text = ''.join(''.join(line) for line in io_obj.vt.lines)
-    assert 'waiting' in all_text
+    monkeypatch.setattr("builtins.input", lambda: "")
+    io_obj.pause("waiting...")
+    all_text = "".join("".join(line) for line in io_obj.vt.lines)
+    assert "waiting" in all_text
 
 
 def test_io_pause_without_message_does_not_raise(io_obj, monkeypatch, capsys):
-    monkeypatch.setattr('builtins.input', lambda: '')
+    monkeypatch.setattr("builtins.input", lambda: "")
     io_obj.pause()  # should complete without error
 
 
 # ── IO: menu ─────────────────────────────────────────────────────────────────
 
+
 def test_io_menu_returns_label_for_valid_choice(io_obj, monkeypatch, capsys):
-    menu = (('title', [('first', 'LBL1'), ('second', 'LBL2')]),)
-    monkeypatch.setattr('builtins.input', lambda *_: '2')
-    assert io_obj.menu(menu) == 'LBL2'
+    menu = (("title", [("first", "LBL1"), ("second", "LBL2")]),)
+    monkeypatch.setattr("builtins.input", lambda *_: "2")
+    assert io_obj.menu(menu) == "LBL2"
 
 
 def test_io_menu_prints_title_and_options(io_obj, monkeypatch, capsys):
-    menu = (('choose', [('option A', 'LA'), ('option B', 'LB')]),)
-    monkeypatch.setattr('builtins.input', lambda *_: '1')
+    menu = (("choose", [("option A", "LA"), ("option B", "LB")]),)
+    monkeypatch.setattr("builtins.input", lambda *_: "1")
     io_obj.menu(menu)
     out = capsys.readouterr().out
-    assert 'choose' in out
-    assert 'option A' in out
+    assert "choose" in out
+    assert "option A" in out
 
 
 def test_io_menu_reprompts_on_invalid_choice(io_obj, monkeypatch, capsys):
-    menu = (('t', [('only', 'LBL')]),)
-    responses = iter(['nope', '99', '1'])
-    monkeypatch.setattr('builtins.input', lambda *_: next(responses))
-    assert io_obj.menu(menu) == 'LBL'
-    assert capsys.readouterr().out.count('invalid choice') == 2
+    menu = (("t", [("only", "LBL")]),)
+    responses = iter(["nope", "99", "1"])
+    monkeypatch.setattr("builtins.input", lambda *_: next(responses))
+    assert io_obj.menu(menu) == "LBL"
+    assert capsys.readouterr().out.count("invalid choice") == 2
 
 
 def test_io_menu_first_choice_is_valid(io_obj, monkeypatch, capsys):
-    menu = (('t', [('alpha', 'A'), ('beta', 'B')]),)
-    monkeypatch.setattr('builtins.input', lambda *_: '1')
-    assert io_obj.menu(menu) == 'A'
+    menu = (("t", [("alpha", "A"), ("beta", "B")]),)
+    monkeypatch.setattr("builtins.input", lambda *_: "1")
+    assert io_obj.menu(menu) == "A"

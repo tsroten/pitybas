@@ -85,6 +85,7 @@ one failed attempt a 2-item menu's `lookup` held 4 entries. A choice of
 wrong label. Fixed by moving `lookup = []` inside the loop so it is
 rebuilt fresh on every display/prompt cycle.
 """
+
 import io as std_io
 import types
 
@@ -98,38 +99,44 @@ def disp_of(source):
     return run(source).io.disps
 
 
-@pytest.mark.parametrize('expr,correct', [
-    ('Disp 2+3*4', 14),
-    ('Disp 2*3^2', 18),
-    ('Disp 3^2*2', 18),
-])
+@pytest.mark.parametrize(
+    "expr,correct",
+    [
+        ("Disp 2+3*4", 14),
+        ("Disp 2*3^2", 18),
+        ("Disp 3^2*2", 18),
+    ],
+)
 def test_operator_precedence_follows_numeric_priority(expr, correct):
     assert disp_of(expr) == [correct]
 
 
-@pytest.mark.parametrize('expr,correct', [
-    ('Disp 3*4', 12),
-    ('Disp 7*8', 56),
-    ('Disp 9*9', 81),
-])
+@pytest.mark.parametrize(
+    "expr,correct",
+    [
+        ("Disp 3*4", 12),
+        ("Disp 7*8", 56),
+        ("Disp 9*9", 81),
+    ],
+)
 def test_small_operand_multiplication_keeps_precision(expr, correct):
     assert disp_of(expr) == [correct]
 
 
 def test_fix_after_division_does_not_crash():
-    assert disp_of('Fix 2\nDisp 1/3') == [0.33]
+    assert disp_of("Fix 2\nDisp 1/3") == [0.33]
 
 
 def test_input_treats_str_variable_as_raw_string():
-    assert run('Input "name?", Str0\nDisp Str0', inputs=['bob']).io.disps == ['bob']
+    assert run('Input "name?", Str0\nDisp Str0', inputs=["bob"]).io.disps == ["bob"]
 
 
 def test_nCr_does_not_crash():
-    assert disp_of('Disp 5 nCr 2') == [10]
+    assert disp_of("Disp 5 nCr 2") == [10]
 
 
 def test_lcm_reduces_second_list_argument():
-    assert disp_of('Disp lcm(4,{2,3})') == [12]
+    assert disp_of("Disp lcm(4,{2,3})") == [12]
 
 
 def test_menu_entries_are_reusable_across_retries():
@@ -144,9 +151,10 @@ def test_menu_entries_are_reusable_across_retries():
                 first_pass = list(entries)
                 second_pass = list(entries)
 
-            assert first_pass, 'menu should have options on the first pass'
-            assert first_pass == second_pass, \
-                'menu entries were exhausted on the second pass'
+            assert first_pass, "menu should have options on the first pass"
+            assert first_pass == second_pass, (
+                "menu entries were exhausted on the second pass"
+            )
 
             _, label = second_pass[0]
             return label
@@ -156,27 +164,22 @@ def test_menu_entries_are_reusable_across_retries():
         io=lambda vm: MenuIO(vm),
     )
     vm.execute()
-    assert vm.io.disps == ['yes']
+    assert vm.io.disps == ["yes"]
 
 
 def test_verbose_repl_with_no_filename_does_not_crash(monkeypatch):
     from pitybas.cli import main
 
-    monkeypatch.setattr('sys.stdin', std_io.StringIO(''))
-    main(['-v'])
+    monkeypatch.setattr("sys.stdin", std_io.StringIO(""))
+    main(["-v"])
 
 
 def test_goto_letter_digit_label_reaches_matching_label():
     """Reproduces bug 9: Goto M2 must land at Lbl M2, not Lbl M1, even
     though both labels parse as the same kind of implied-multiplication
     expression (Variable * Value)."""
-    vm = run(
-        'Goto M2\n'
-        'Lbl M1\nDisp "one"\n'
-        'Lbl M2\nDisp "two"\n'
-        'Lbl M3\nDisp "three"'
-    )
-    assert vm.io.disps == ['two', 'three']
+    vm = run('Goto M2\nLbl M1\nDisp "one"\nLbl M2\nDisp "two"\nLbl M3\nDisp "three"')
+    assert vm.io.disps == ["two", "three"]
 
 
 def test_getkey_returns_enter_keycode_for_carriage_return(monkeypatch):
@@ -186,15 +189,20 @@ def test_getkey_returns_enter_keycode_for_carriage_return(monkeypatch):
     from pitybas.interpret import Interpreter
     from pitybas.io import vt100
 
-    monkeypatch.setattr(vt100.termios, 'tcgetattr', lambda fd: None)
-    monkeypatch.setattr(vt100.termios, 'tcsetattr', lambda fd, when, attrs: None)
-    monkeypatch.setattr(vt100.tty, 'setraw', lambda fd: None)
-    monkeypatch.setattr(vt100.select, 'select', lambda r, w, x, timeout: (r, [], []))
-    monkeypatch.setattr(vt100.sys, 'stdin', types.SimpleNamespace(
-        fileno=lambda: 0, read=lambda n: '\r',
-    ))
+    monkeypatch.setattr(vt100.termios, "tcgetattr", lambda fd: None)
+    monkeypatch.setattr(vt100.termios, "tcsetattr", lambda fd, when, attrs: None)
+    monkeypatch.setattr(vt100.tty, "setraw", lambda fd: None)
+    monkeypatch.setattr(vt100.select, "select", lambda r, w, x, timeout: (r, [], []))
+    monkeypatch.setattr(
+        vt100.sys,
+        "stdin",
+        types.SimpleNamespace(
+            fileno=lambda: 0,
+            read=lambda n: "\r",
+        ),
+    )
 
-    io = vt100.IO(Interpreter.from_string(''))
+    io = vt100.IO(Interpreter.from_string(""))
     assert io.getkey() == 105
 
 
@@ -208,12 +216,12 @@ def test_io_menu_lookup_resets_on_retry(monkeypatch, capsys):
 
     # After 'bad' (non-digit), '3' must still be out-of-range for a 2-item
     # menu and cause another reprompt.  Only '2' should succeed, returning 'B'.
-    responses = iter(['bad', '3', '2'])
-    monkeypatch.setattr('builtins.input', lambda: next(responses))
+    responses = iter(["bad", "3", "2"])
+    monkeypatch.setattr("builtins.input", lambda: next(responses))
 
-    vm = Interpreter.from_string('')
+    vm = Interpreter.from_string("")
     io = IO(vm)
 
-    menu = (('t', [('opt1', 'A'), ('opt2', 'B')]),)
-    assert io.menu(menu) == 'B'
-    assert capsys.readouterr().out.count('invalid choice') == 2
+    menu = (("t", [("opt1", "A"), ("opt2", "B")]),)
+    assert io.menu(menu) == "B"
+    assert capsys.readouterr().out.count("invalid choice") == 2

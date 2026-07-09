@@ -6,6 +6,19 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .[lint]
+      - run: ruff check src/ tests/
+      - run: ruff format --check src/ tests/
+
   pytest:
     runs-on: ubuntu-latest
     strategy:

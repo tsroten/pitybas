@@ -41,6 +41,7 @@ pb = "pitybas.cli:main"
 
 [project.optional-dependencies]
 test = ["pytest"]
+lint = ["ruff"]
 
 [tool.setuptools.dynamic]
 version = { attr = "pitybas.__version__" }
@@ -50,3 +51,12 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E741",  # ambiguous variable name: single-letter list variables are intentional in this TI-BASIC interpreter
+]

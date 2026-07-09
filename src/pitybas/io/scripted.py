@@ -60,13 +60,13 @@ class ScriptedIO(IOBase):
         """Record a positioned write as a ``(row, col, msg)`` tuple."""
         self.outputs.append((row, col, msg))
 
-    def disp(self, msg=''):
+    def disp(self, msg=""):
         # lists/matrices are mutable and stored by reference in the vm;
         # snapshot them so later mutations don't retroactively change
         # already-recorded output.
         self.disps.append(copy.deepcopy(msg))
 
-    def pause(self, msg=''):
+    def pause(self, msg=""):
         if msg:
             self.disp(msg)
 

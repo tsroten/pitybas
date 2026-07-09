@@ -64,7 +64,30 @@ Recorded attributes:
 
 ## Development
 
-Clone the repository and install it in editable mode with the test extras:
+Clone the repository and install it in editable mode with the test and lint extras:
 
-    pip install -e .[test]
-    pytest
+    pip install -e ".[test,lint]"
+
+### Running tests
+
+    python -m pytest
+
+### Linting
+
+Check for lint violations:
+
+    ruff check src/ tests/
+
+Fix auto-fixable violations:
+
+    ruff check --fix src/ tests/
+
+### Formatting
+
+Check formatting without making changes:
+
+    ruff format --check src/ tests/
+
+Apply formatting:
+
+    ruff format src/ tests/

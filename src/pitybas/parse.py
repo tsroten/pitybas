@@ -1,11 +1,20 @@
 # -*- coding: utf-8 -*-
 from . import tokens
 from .common import ParseError, is_number
-from .expression import Expression, Bracketed, FunctionArgs, Tuple, ParenExpr, ListExpr, MatrixExpr
+from .expression import (
+    Expression,
+    Bracketed,
+    FunctionArgs,
+    Tuple,
+    ParenExpr,
+    ListExpr,
+    MatrixExpr,
+)
 from .expression import Base as BaseExpression
 
-_SUBSCRIPT_DIGITS = '₀₁₂₃₄₅₆₇₈₉'
-_SUBSCRIPT_TRANS = str.maketrans('₀₁₂₃₄₅₆₇₈₉', '0123456789')
+_SUBSCRIPT_DIGITS = "₀₁₂₃₄₅₆₇₈₉"
+_SUBSCRIPT_TRANS = str.maketrans("₀₁₂₃₄₅₆₇₈₉", "0123456789")
+
 
 class Parser:
     LOOKUP = {}
@@ -24,7 +33,7 @@ class Parser:
     TOKENS.reverse()
 
     for t in TOKENS:
-        if not t[0] in SYMBOLS and not t.isalpha():
+        if t[0] not in SYMBOLS and not t.isalpha():
             SYMBOLS.append(t[0])
 
     def __init__(self, source):
@@ -38,20 +47,21 @@ class Parser:
 
     @staticmethod
     def parse_line(vm, line):
-        if not line: return
+        if not line:
+            return
 
         parser = Parser(line)
         parser.TOKENS = parser.VARIABLES + parser.FUNCTIONS + parser.OPERATORS
 
         parser.SYMBOLS = []
         for t in parser.TOKENS:
-            if not t[0] in parser.SYMBOLS and not t.isalpha():
+            if t[0] not in parser.SYMBOLS and not t.isalpha():
                 parser.SYMBOLS.append(t[0])
 
         return vm.get(parser.parse()[0][0])
 
     def clean(self):
-        self.source = self.source.replace('\r\n', '\n').replace('\r', '\n')
+        self.source = self.source.replace("\r\n", "\n").replace("\r", "\n")
 
     def error(self, msg):
         raise ParseError(msg)
@@ -60,7 +70,8 @@ class Parser:
         self.pos += n
 
     def more(self, pos=None):
-        if pos is None: pos = self.pos
+        if pos is None:
+            pos = self.pos
         return pos < self.length
 
     def post(self):
@@ -83,10 +94,11 @@ class Parser:
                     new.append(expr)
 
                 if new:
-                    # implied expressions need to be added to tuples in their entirety, instead of just their last element
+                    # implied expressions need to be added to tuples in their
+                    # entirety, instead of just their last element
                     pops = []
-                    for i in range(0, len(new)-1):
-                        e, t = new[i], new[i+1]
+                    for i in range(0, len(new) - 1):
+                        e, t = new[i], new[i + 1]
                         if isinstance(e, Expression) and isinstance(t, Tuple):
                             pops.append(i)
                             e.append(t.contents[0].flatten())
@@ -95,7 +107,8 @@ class Parser:
                     for p in reversed(sorted(pops)):
                         new.pop(p)
 
-                    # tokens with the absorb mechanic can steal the next token from the line if it matches a list of types
+                    # tokens with the absorb mechanic can steal the next token
+                    # from the line if it matches a list of types
                     last = new[0]
                     pops = []
                     for i in range(1, len(new)):
@@ -123,39 +136,44 @@ class Parser:
             else:
                 token = None
 
-            if token and hasattr(token, 'dynamic') and hasattr(token.dynamic, '__call__') and token.dynamic(char):
+            if (
+                token
+                and hasattr(token, "dynamic")
+                and hasattr(token.dynamic, "__call__")
+                and token.dynamic(char)
+            ):
                 self.inc()
                 continue
-            elif char in ('\n', ':'):
+            elif char in ("\n", ":"):
                 self.close_brackets()
 
                 self.inc()
                 self.line += 1
                 continue
-            elif char in ' \t':
+            elif char in " \t":
                 self.inc()
                 continue
-            elif char in '([{':
-                if char == '(':
-                    cls =  ParenExpr
-                elif char == '[':
-                    if self.more(self.pos+1) and self.source[self.pos+1].isalpha():
+            elif char in "([{":
+                if char == "(":
+                    cls = ParenExpr
+                elif char == "[":
+                    if self.more(self.pos + 1) and self.source[self.pos + 1].isalpha():
                         result = self.matrix()
                     else:
                         cls = MatrixExpr
-                elif char == '{':
+                elif char == "{":
                     cls = ListExpr
 
                 if result is None:
                     self.stack.append(cls(char))
                     self.inc()
                     continue
-            elif char in ')]}':
+            elif char in ")]}":
                 if self.stack:
                     stacks = []
                     l = len(self.stack)
                     for i in range(l):
-                        stack = self.stack.pop(l-i-1)
+                        stack = self.stack.pop(l - i - 1)
                         if isinstance(stack, Bracketed):
                             if stack.close(char):
                                 for s in stacks:
@@ -168,16 +186,25 @@ class Parser:
                                 self.inc()
                                 break
                             elif char != stack.end:
-                                self.error('tried to end \'%s\' with: "%s" (expecting "%s")' % (stack, char, stack.end))
+                                self.error(
+                                    'tried to end \'%s\' with: "%s" (expecting "%s")'
+                                    % (stack, char, stack.end)
+                                )
                             else:
                                 stacks.append(stack)
                         else:
                             stacks.append(stack)
                 else:
-                    self.error('encountered "%s" but we have no expression on the stack to terminate' % char)
-            elif char == ',':
-                if len(self.stack) > 1 and isinstance(self.stack[-2], Tuple)\
-                        and not isinstance(self.stack[-1], Tuple):
+                    self.error(
+                        'encountered "%s" but we have no expression'
+                        " on the stack to terminate" % char
+                    )
+            elif char == ",":
+                if (
+                    len(self.stack) > 1
+                    and isinstance(self.stack[-2], Tuple)
+                    and not isinstance(self.stack[-1], Tuple)
+                ):
                     expr = self.stack.pop()
                     tup = self.stack[-1]
                     tup.append(expr)
@@ -185,12 +212,18 @@ class Parser:
                 elif self.stack and isinstance(self.stack[-1], Tuple):
                     self.stack[-1].sep()
                 elif self.stack:
-                    raise ParseError('comma encountered with an unclosed non-tuple expression on the stack')
+                    raise ParseError(
+                        "comma encountered with an unclosed"
+                        " non-tuple expression on the stack"
+                    )
                 else:
                     if self.lines[-1]:
                         token = self.lines[-1].pop()
                     else:
-                        self.error('Encountered comma, but cannot find anything to put in the tuple')
+                        self.error(
+                            "Encountered comma, but cannot find"
+                            " anything to put in the tuple"
+                        )
 
                     tup = Tuple()
                     tup.append(token)
@@ -202,10 +235,19 @@ class Parser:
 
                 self.inc()
                 continue
-            elif '0' <= char <= '9' or char == '.'\
-                    or isinstance(self.token(sub=True, inc=False), tokens.Minus) and self.number(test=True):
+            elif (
+                "0" <= char <= "9"
+                or char == "."
+                or isinstance(self.token(sub=True, inc=False), tokens.Minus)
+                and self.number(test=True)
+            ):
                 result = tokens.Value(self.number())
-            elif char in u'lL∟ʟ' and self.more(self.pos+1) and self.source[self.pos+1] in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' + _SUBSCRIPT_DIGITS:
+            elif (
+                char in "lL∟ʟ"
+                and self.more(self.pos + 1)
+                and self.source[self.pos + 1]
+                in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" + _SUBSCRIPT_DIGITS
+            ):
                 result = self.list()
             elif char.isalpha():
                 result = self.token()
@@ -221,7 +263,7 @@ class Parser:
             elif char in self.SYMBOLS:
                 result = self.symbol()
             else:
-                self.error('could not tokenize: %s' % repr(char))
+                self.error("could not tokenize: %s" % repr(char))
 
             if isinstance(result, tokens.Stor):
                 self.close_brackets()
@@ -234,13 +276,13 @@ class Parser:
                 argument = True
 
             if isinstance(result, (tokens.List, tokens.Matrix)):
-                if self.more() and self.source[self.pos] == '(':
+                if self.more() and self.source[self.pos] == "(":
                     self.inc()
                     argument = True
 
             # we were told to push the stack into argument mode
             if argument:
-                args = FunctionArgs('(')
+                args = FunctionArgs("(")
                 self.stack.append(args)
                 self.stack.append(Expression())
                 result.absorb(args)
@@ -265,13 +307,17 @@ class Parser:
 
     def dms_seconds_pending(self):
         if self.stack:
-            items = getattr(self.stack[-1], 'contents', None)
+            items = getattr(self.stack[-1], "contents", None)
         elif self.lines and self.line < len(self.lines):
             items = self.lines[self.line]
         else:
             items = None
 
-        return bool(items) and len(items) >= 2 and isinstance(items[-2], tokens.MinuteSymbol)
+        return (
+            bool(items)
+            and len(items) >= 2
+            and isinstance(items[-2], tokens.MinuteSymbol)
+        )
 
     def symbol(self):
         token = self.token(True)
@@ -287,7 +333,7 @@ class Parser:
                 self.token()
 
     def token(self, sub=False, inc=True):
-        remaining = self.source[self.pos:]
+        remaining = self.source[self.pos :]
         for token in self.TOKENS:
             if remaining.startswith(token):
                 if inc:
@@ -295,16 +341,19 @@ class Parser:
                 return self.LOOKUP[token]()
         else:
             if not sub:
-                near = remaining[:8].split('\n',1)[0]
-                self.error('no token found at pos %i near "%s"' % (self.pos, repr(near)))
+                near = remaining[:8].split("\n", 1)[0]
+                self.error(
+                    'no token found at pos %i near "%s"' % (self.pos, repr(near))
+                )
 
     def number(self, dot=True, test=False, inc=True):
-        num = ''
+        num = ""
         first = True
         pos = self.pos
         while self.more(pos):
             char = self.source[pos]
-            if char == '-' and first: pass
+            if char == "-" and first:
+                pass
             elif not char.isdigit():
                 break
 
@@ -312,8 +361,8 @@ class Parser:
             num += char
             pos += 1
 
-        if char == '.' and dot:
-            num += '.'
+        if char == "." and dot:
+            num += "."
             pos += 1
 
             self.pos, tmp = pos, self.pos
@@ -324,10 +373,12 @@ class Parser:
 
             pos, self.pos = self.pos, tmp
 
-        if inc and not test: self.pos = pos
+        if inc and not test:
+            self.pos = pos
 
         if is_number(num):
-            if test: return True
+            if test:
+                return True
             try:
                 n = int(num)
             except ValueError:
@@ -335,14 +386,17 @@ class Parser:
 
             return n
         else:
-            if test: return False
+            if test:
+                return False
             lines = self.source[:pos]
-            line = lines.count('\n') + 1
-            col = max(self.pos - lines.rfind('\n'), 0)
-            raise ParseError('invalid number ending at {}:{}: {}'.format(line, col, num))
+            line = lines.count("\n") + 1
+            col = max(self.pos - lines.rfind("\n"), 0)
+            raise ParseError(
+                "invalid number ending at {}:{}: {}".format(line, col, num)
+            )
 
     def string(self):
-        ret = ''
+        ret = ""
         self.inc()
 
         while self.more():
@@ -351,7 +405,7 @@ class Parser:
                 self.inc()
                 break
 
-            elif char == '\n':
+            elif char == "\n":
                 break
 
             ret += char
@@ -359,8 +413,8 @@ class Parser:
 
         return ret
 
-    def all(self, match='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'):
-        ret = ''
+    def all(self, match="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"):
+        ret = ""
         while self.more():
             char = self.source[self.pos]
             if char in match:
@@ -373,7 +427,9 @@ class Parser:
 
     def list(self):
         self.inc()
-        name = self.all(match='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' + _SUBSCRIPT_DIGITS)
+        name = self.all(
+            match="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" + _SUBSCRIPT_DIGITS
+        )
         name = name.translate(_SUBSCRIPT_TRANS)
         return tokens.List(name)
 
@@ -381,7 +437,7 @@ class Parser:
         self.inc()
         name = self.all()
 
-        assert self.more() and self.source[self.pos] == ']'
+        assert self.more() and self.source[self.pos] == "]"
         self.inc()
 
         return tokens.Matrix(name)

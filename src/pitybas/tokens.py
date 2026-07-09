@@ -11,44 +11,53 @@ from .expression import Tuple, Expression, Arguments, ListExpr, MatrixExpr
 from .token_core import (
     Function,
     InvalidOperation,
-    Parent,
+    Parent,  # noqa: F401  re-exported as part of this module's public API
     Stub,
-    StubFunction,
     StubToken,
     Token,
-    Tracker,
     Variable,
     get,
 )
 
 # helpers
 
+
 def add_class(name, *args, **kwargs):
     globals()[name] = type(name, args, kwargs)
 
+
 # variables
+
 
 class EOF(Token, Stub):
     def run(self, vm):
         raise StopError
 
+
 class Const(Variable, Stub):
     value = None
 
-    def set(self, vm, value): raise InvalidOperation
-    def get(self, vm): return self.value
+    def set(self, vm, value):
+        raise InvalidOperation
+
+    def get(self, vm):
+        return self.value
+
 
 class Value(Const, Stub):
     def __init__(self, value):
         self.value = value
         Variable.__init__(self)
 
-    def get(self, vm): return self.value
+    def get(self, vm):
+        return self.value
 
     def __repr__(self):
         return repr(self.value)
 
+
 # list/matrix
+
 
 class List(Variable, Stub):
     absorbs = (Arguments,)
@@ -75,7 +84,7 @@ class List(Variable, Stub):
         if self.arg:
             arg = vm.get(self.arg)[0]
             assert isinstance(arg, int)
-            return vm.get_list(self.name)[arg-1]
+            return vm.get_list(self.name)[arg - 1]
 
         return vm.get_list(self.name)
 
@@ -103,12 +112,14 @@ class List(Variable, Stub):
 
     def __repr__(self):
         if self.arg:
-            return 'l%s(%s)' % (self.name, self.arg)
+            return "l%s(%s)" % (self.name, self.arg)
 
-        return 'l%s' % self.name
+        return "l%s" % self.name
+
 
 class ListToken(List):
-    token = u'∟'
+    token = "∟"
+
 
 class Matrix(Variable, Stub):
     absorbs = (Arguments,)
@@ -128,7 +139,7 @@ class Matrix(Variable, Stub):
 
             m = m[:a]
             for i in range(len(m), a):
-                n = ([0] * b)
+                n = [0] * b
                 m.append(n)
 
             m = [l[:b] + ([0] * (b - len(l))) for l in m]
@@ -141,7 +152,7 @@ class Matrix(Variable, Stub):
         if self.arg:
             arg = vm.get(self.arg)
             assert isinstance(arg, list) and len(arg) == 2
-            return vm.get_matrix(self.name)[arg[0]-1][arg[1]-1]
+            return vm.get_matrix(self.name)[arg[0] - 1][arg[1] - 1]
 
         return vm.get_matrix(self.name)
 
@@ -152,7 +163,7 @@ class Matrix(Variable, Stub):
             assert isinstance(value, (int, float, complex))
 
             m = vm.get_matrix(self.name)
-            m[arg[0]-1][arg[1]-1] = value
+            m[arg[0] - 1][arg[1] - 1] = value
         else:
             assert isinstance(value, list)
             vm.set_matrix(self.name, value)
@@ -160,7 +171,8 @@ class Matrix(Variable, Stub):
         return value
 
     def __repr__(self):
-        return '[%s]' % self.name
+        return "[%s]" % self.name
+
 
 class dim(Function):
     def get(self, vm):
@@ -175,10 +187,10 @@ class dim(Function):
 
         arg = self.arg.contents[0].flatten()
         assert isinstance(arg, (List, Matrix))
-        name = arg.name
 
         arg.dim(vm, value)
         return value
+
 
 class augment(Function):
     def get(self, vm):
@@ -187,13 +199,16 @@ class augment(Function):
         b = self.arg.contents[1].flatten()
         if isinstance(a, (List, ListExpr)) and isinstance(b, (List, ListExpr)):
             return vm.get(a) + vm.get(b)
-        elif isinstance(a, (Matrix, MatrixExpr)) and isinstance(b, (Matrix, MatrixExpr)):
+        elif isinstance(a, (Matrix, MatrixExpr)) and isinstance(
+            b, (Matrix, MatrixExpr)
+        ):
             a = vm.get(a)
             b = vm.get(b)
             assert len(a) == len(b)
             return [left + b[i] for i, left in enumerate(a)]
         else:
-            raise ExecutionError('augment() requires List, List or Matrix, Matrix')
+            raise ExecutionError("augment() requires List, List or Matrix, Matrix")
+
 
 class Fill(Function):
     def run(self, vm):
@@ -220,6 +235,7 @@ class Fill(Function):
 
             var.set(vm, m)
 
+
 class seq(Function):
     def get(self, vm):
         assert self.arg and len(self.arg) in (4, 5)
@@ -238,13 +254,15 @@ class seq(Function):
             out.append(vm.get(expr))
         return out
 
+
 class Sum(Function):
-    token = 'sum'
+    token = "sum"
 
     def get(self, vm):
         assert self.arg and len(self.arg) == 1
         arg = self.arg.flatten()
         return sum(vm.get(arg))
+
 
 class prod(Function):
     def call(self, vm, args):
@@ -256,15 +274,17 @@ class prod(Function):
         end = args[2] if len(args) >= 3 else len(lst)
         assert start >= 1 and start <= end <= len(lst)
 
-        return reduce(lambda a, b: a * b, lst[start - 1:end], 1)
+        return reduce(lambda a, b: a * b, lst[start - 1 : end], 1)
+
 
 class DeltaList(Function):
-    token = 'ΔList'
+    token = "ΔList"
 
     def get(self, vm):
         assert self.arg and len(self.arg) == 1
         lst = vm.get(self.arg.flatten())
         return [lst[i + 1] - lst[i] for i in range(len(lst) - 1)]
+
 
 class cumSum(Function):
     def get(self, vm):
@@ -276,6 +296,7 @@ class cumSum(Function):
             total += x
             out.append(total)
         return out
+
 
 class SortA(Function):
     descending = False
@@ -291,34 +312,47 @@ class SortA(Function):
             dep = vm.get_list(dep_list.name)
             vm.set_list(dep_list.name, [dep[i] for i in indices])
 
+
 class SortD(SortA):
     descending = True
 
+
 class Ans(Const):
-    def get(self, vm): return vm.get_var('Ans')
+    def get(self, vm):
+        return vm.get_var("Ans")
+
 
 class Pi(Const):
-    token = u'π'
+    token = "π"
     value = math.pi
 
+
 class e(Const):
-    token = 'e'
+    token = "e"
     value = math.e
 
+
 class SimpleVar(Variable, Stub):
-    def set(self, vm, value): return vm.set_var(self.token, value)
-    def get(self, vm): return vm.get_var(self.token)
+    def set(self, vm, value):
+        return vm.set_var(self.token, value)
+
+    def get(self, vm):
+        return vm.get_var(self.token)
+
 
 class NumVar(SimpleVar, Stub):
     def get(self, vm):
         return vm.get_var(self.token, 0)
 
+
 class StrVar(SimpleVar, Stub):
     def get(self, vm):
-        return vm.get_var(self.token, '')
+        return vm.get_var(self.token, "")
+
 
 class Theta(NumVar):
-    token = u'\u03b8'
+    token = "\u03b8"
+
 
 class THETA(NumVar):
     def set(self, vm, value):
@@ -327,14 +361,18 @@ class THETA(NumVar):
     def get(self, vm):
         return vm.get_var(Theta.token)
 
-for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
+
+for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
     add_class(c, NumVar)
+
 
 class Str(SimpleVar, Stub):
     pass
 
+
 for i in range(10):
-    add_class('Str%i' % i, StrVar)
+    add_class("Str%i" % i, StrVar)
+
 
 class DelVar(Token):
     absorbs = (Expression, Variable)
@@ -352,14 +390,17 @@ class DelVar(Token):
         else:
             vm.vars.pop(arg.token, None)
 
+
 class Archive(Token):
     absorbs = (Expression, Variable)
 
     def run(self, vm):
         pass
 
+
 class UnArchive(Archive):
     pass
+
 
 class ClrList(Token):
     absorbs = (Expression, Variable, Tuple)
@@ -367,7 +408,7 @@ class ClrList(Token):
     def run(self, vm):
         arg = self.arg
         if not arg:
-            raise ExecutionError('ClrList used without arguments')
+            raise ExecutionError("ClrList used without arguments")
 
         lists = arg.contents if isinstance(arg, Tuple) else [arg]
         for lst in lists:
@@ -376,15 +417,18 @@ class ClrList(Token):
             assert isinstance(lst, List)
             lst.dim(vm, 0)
 
+
 class ClrAllLists(Token):
     def run(self, vm):
         for name in list(vm.lists):
             vm.set_list(name, [])
 
+
 # operators
 
+
 class Stor(Token):
-    token = u'→'
+    token = "→"
     priority = Pri.SET
 
     def run(self, vm, left, right):
@@ -392,12 +436,16 @@ class Stor(Token):
         right.set(vm, ans)
         return ans
 
-class Store(Stor): token = '->'
+
+class Store(Stor):
+    token = "->"
+
 
 class Operator(Token, Stub):
     @get
     def run(self, vm, left, right):
         return self.op(left, right)
+
 
 def round_precision(ans):
     # 14 digits of precision?
@@ -409,17 +457,29 @@ def round_precision(ans):
 
     return ans
 
+
 class FloatOperator(Operator, Stub):
     @get
     def run(self, vm, left, right):
         return round_precision(self.op(left, right))
 
-class AddSub(Operator, Stub): priority = Pri.ADDSUB
-class MultDiv(FloatOperator, Stub): priority = Pri.MULTDIV
-class Exponent(Operator, Stub): priority = Pri.EXPONENT
+
+class AddSub(Operator, Stub):
+    priority = Pri.ADDSUB
+
+
+class MultDiv(FloatOperator, Stub):
+    priority = Pri.MULTDIV
+
+
+class Exponent(Operator, Stub):
+    priority = Pri.EXPONENT
+
+
 class RightExponent(Exponent, Stub):
     def fill_right(self):
         return Value(None)
+
 
 class Bool(Operator, Stub):
     priority = Pri.BOOL
@@ -428,6 +488,7 @@ class Bool(Operator, Stub):
     def run(self, vm, left, right):
         return int(bool(self.bool(left, right)))
 
+
 # a Function expecting a single Expression as the argument
 class MathExprFunction(Function, Stub):
     def get(self, vm):
@@ -435,15 +496,21 @@ class MathExprFunction(Function, Stub):
         args = vm.get(self.arg)
         return self.call(vm, args[0])
 
-class Logic(Bool): priority = Pri.LOGIC
+
+class Logic(Bool):
+    priority = Pri.LOGIC
+
 
 # math
+
 
 def is_matrix(value):
     return isinstance(value, list) and value and isinstance(value[0], list)
 
+
 def is_list(value):
     return isinstance(value, list) and not is_matrix(value)
+
 
 def elementwise(op, left, right):
     """Apply a scalar binary op across List/Matrix operands the way real
@@ -453,14 +520,14 @@ def elementwise(op, left, right):
     if isinstance(left, list) and isinstance(right, list):
         if is_matrix(left) and is_matrix(right):
             if len(left) != len(right) or len(left[0]) != len(right[0]):
-                raise ExecutionError('ERR:DIM MISMATCH')
+                raise ExecutionError("ERR:DIM MISMATCH")
             return [[op(a, b) for a, b in zip(ra, rb)] for ra, rb in zip(left, right)]
         elif is_list(left) and is_list(right):
             if len(left) != len(right):
-                raise ExecutionError('ERR:DIM MISMATCH')
+                raise ExecutionError("ERR:DIM MISMATCH")
             return [op(a, b) for a, b in zip(left, right)]
         else:
-            raise ExecutionError('ERR:DATA TYPE')
+            raise ExecutionError("ERR:DATA TYPE")
     elif isinstance(left, list):
         if is_matrix(left):
             return [[op(a, right) for a in row] for row in left]
@@ -472,28 +539,32 @@ def elementwise(op, left, right):
     else:
         return op(left, right)
 
+
 def matrix_multiply(left, right):
     rows, mid = len(left), len(left[0])
     mid_b, cols = len(right), len(right[0])
     if mid != mid_b:
-        raise ExecutionError('ERR:DIM MISMATCH')
+        raise ExecutionError("ERR:DIM MISMATCH")
 
     return [
         [sum(left[i][k] * right[k][j] for k in range(mid)) for j in range(cols)]
         for i in range(rows)
     ]
 
+
 class Plus(AddSub):
-    token = '+'
+    token = "+"
 
     def op(self, left, right):
         return elementwise(lambda a, b: a + b, left, right)
 
+
 class Minus(AddSub):
-    token = '-'
+    token = "-"
 
     def op(self, left, right):
         return elementwise(lambda a, b: a - b, left, right)
+
 
 class Negate(Token):
     """The real calculator's dedicated negation key (raised minus),
@@ -501,17 +572,21 @@ class Negate(Token):
     ambiguous with a binary operator, so Base.append() (expression.py)
     always collapses "Negate X" into "-1 * X" regardless of where it
     appears -- not just when it happens to lead the expression."""
-    token = u'⁻'
+
+    token = "⁻"
     priority = Pri.NONE
+
 
 class NegateTilde(Negate):
     """'~' is the plaintext ASCII rendering of the same negation key used
     when a .8xp program is dumped to text (ASCII has no raised-minus glyph),
     so it must behave identically to '⁻' rather than being left unhandled."""
-    token = '~'
+
+    token = "~"
+
 
 class Mult(MultDiv):
-    token = '*'
+    token = "*"
 
     def op(self, left, right):
         # real matrix multiplication, not element-wise, when both sides
@@ -521,63 +596,74 @@ class Mult(MultDiv):
 
         return elementwise(lambda a, b: a * b, left, right)
 
+
 class Div(MultDiv):
-    token = '/'
+    token = "/"
 
     def op(self, left, right):
         if is_matrix(left) and is_matrix(right):
-            raise ExecutionError('ERR:DATA TYPE')
+            raise ExecutionError("ERR:DATA TYPE")
 
         return elementwise(lambda a, b: a / b, left, right)
 
+
 class Pow(Exponent):
-    token = '^'
+    token = "^"
 
     def op(self, left, right):
-        return left ** right
+        return left**right
+
 
 class transpose(RightExponent):
-    token = '_T'
+    token = "_T"
 
     def op(self, left, right):
-        vm = {'tmp': left}
-        rows, cols = Matrix('tmp').dim(vm)
+        vm = {"tmp": left}
+        rows, cols = Matrix("tmp").dim(vm)
         out = [[0] * rows for i in range(cols)]
         for y in range(rows):
             for x in range(cols):
                 out[x][y] = left[y][x]
         return out
 
+
 # TODO: -¹, ², ³, √(, ³√(, ×√
 class Square(RightExponent):
-    token = u'²'
+    token = "²"
 
     def op(self, left, right):
-        return left ** 2
+        return left**2
+
 
 class Cube(RightExponent):
-    token = u'³'
+    token = "³"
 
     def op(self, left, right):
-        return left ** 3
+        return left**3
+
 
 class Sqrt(MathExprFunction):
-    token = u'√'
+    token = "√"
 
     def call(self, vm, arg):
         return math.sqrt(arg)
 
-class sqrt(Sqrt): pass
+
+class sqrt(Sqrt):
+    pass
+
 
 class CubeRoot(MathExprFunction):
-    token = u'³√'
+    token = "³√"
 
     def call(self, vm, arg):
-        # TODO: proper accuracy. maybe write a numpy addon, to increase accuracy if numpy is installed?
+        # TODO: proper accuracy. maybe write a numpy addon, to increase accuracy
+        # if numpy is installed?
 
         # round to within our accuracy bounds
-        # this allows us to reverse a cube properly, as long as we don't pass 14 significant digits
-        i = arg ** (1.0/3)
+        # this allows us to reverse a cube properly, as long as we don't pass
+        # 14 significant digits
+        i = arg ** (1.0 / 3)
         places = 14 - len(str(int(math.floor(i))))
         if places > 0:
             return round(i, places)
@@ -585,21 +671,24 @@ class CubeRoot(MathExprFunction):
             # oh well
             return i
 
+
 class SciNot(Operator):
     priority = Pri.EXPONENT
-    token = u'ᴇ'
+    token = "ᴇ"
 
     def fill_left(self):
         return Value(1)
 
     def op(self, left, right):
-        return left * (10 ** right)
+        return left * (10**right)
+
 
 class Abs(MathExprFunction):
-    token = 'abs'
+    token = "abs"
 
     def call(self, vm, arg):
         return abs(arg)
+
 
 class gcd(Function):
     def call(self, vm, args):
@@ -608,6 +697,7 @@ class gcd(Function):
             return reduce(lambda a, b: math.gcd(a, b), args[0])
         else:
             return math.gcd(*args)
+
 
 class lcm(Function):
     def call(self, vm, args):
@@ -632,15 +722,17 @@ class lcm(Function):
             a = cls.lcm(a, b)
         return a
 
+
 class Min(Function):
-    token = 'min'
+    token = "min"
 
     def call(self, vm, args):
         assert len(args) == 2
         return min(*args)
 
+
 class Max(Function):
-    token = 'max'
+    token = "max"
 
     def call(self, vm, args):
         assert len(args) in (1, 2)
@@ -655,8 +747,9 @@ class Max(Function):
                 a2 = [a2]
             return max(a1 + a2)
 
+
 class Round(Function):
-    token = 'round'
+    token = "round"
 
     def call(self, vm, args):
         assert len(args) in (1, 2)
@@ -668,84 +761,106 @@ class Round(Function):
 
         return round(args[0], places)
 
+
 class Int(MathExprFunction):
-    token = 'int'
+    token = "int"
 
     def call(self, vm, arg):
         return math.floor(arg)
+
 
 class iPart(MathExprFunction):
     def call(self, vm, arg):
         return int(arg)
 
+
 class fPart(MathExprFunction):
     def call(self, vm, arg):
         return math.modf(arg)[0]
+
 
 class floor(MathExprFunction):
     def call(self, vm, arg):
         return math.floor(arg)
 
+
 class ceiling(MathExprFunction):
     def call(self, vm, arg):
         return math.ceil(arg)
+
 
 class mod(Function):
     def call(self, vm, args):
         assert len(args) == 2
         return args[0] % args[1]
 
+
 class expr(MathExprFunction):
     def call(self, vm, arg):
-        from .parse import Parser, ParseError
+        from .parse import Parser
+
         return Parser.parse_line(vm, arg)
+
 
 # trig
 
+
 class sin(MathExprFunction):
     def call(self, vm, arg):
-        if vm.degree_mode: arg = math.radians(arg)
+        if vm.degree_mode:
+            arg = math.radians(arg)
         return math.sin(arg)
+
 
 class cos(MathExprFunction):
     def call(self, vm, arg):
-        if vm.degree_mode: arg = math.radians(arg)
+        if vm.degree_mode:
+            arg = math.radians(arg)
         return math.cos(arg)
+
 
 class tan(MathExprFunction):
     def call(self, vm, arg):
-        if vm.degree_mode: arg = math.radians(arg)
+        if vm.degree_mode:
+            arg = math.radians(arg)
         return math.tan(arg)
 
-# TODO: subclass these inverse functions with the unicode -1 token, and probably add support for that in the parser for ints too
+
+# TODO: subclass these inverse functions with the unicode -1 token, and
+# probably add support for that in the parser for ints too
 class asin(MathExprFunction):
-    token = 'sin-1'
+    token = "sin-1"
 
     def call(self, vm, arg):
         result = math.asin(arg)
         return math.degrees(result) if vm.degree_mode else result
 
+
 class acos(MathExprFunction):
-    token = 'cos-1'
+    token = "cos-1"
 
     def call(self, vm, arg):
         result = math.acos(arg)
         return math.degrees(result) if vm.degree_mode else result
 
+
 class atan(MathExprFunction):
-    token = 'tan-1'
+    token = "tan-1"
 
     def call(self, vm, arg):
         result = math.atan(arg)
         return math.degrees(result) if vm.degree_mode else result
 
+
 # angle mode
+
 
 def _terminal(right):
     # RightExponent.fill_right() pads a trailing Value(None) onto a
     # postfix operator with nothing after it; that's how we tell "D°" (no
     # minutes follow) apart from "D°M" (mid-DMS-chain, more to fold in).
     return isinstance(right, Value) and right.value is None
+
 
 class DegreeSymbol(RightExponent):
     # postfix °: treats its operand as degrees regardless of the current
@@ -754,7 +869,7 @@ class DegreeSymbol(RightExponent):
     # Also doubles as the D in a D°M'S" DMS literal - when a minutes value
     # follows, fold it in and defer the mode conversion to whichever
     # symbol (this one, ', or ") turns out to be last in the chain.
-    token = u'\xb0'
+    token = "\xb0"
 
     def run(self, vm, left, right):
         value = vm.get(left)
@@ -763,6 +878,7 @@ class DegreeSymbol(RightExponent):
 
         sign = -1 if value < 0 else 1
         return value + sign * vm.get(right) / 60
+
 
 class MinuteSymbol(RightExponent):
     # postfix ': only meaningful as the M in a DMS literal (D°M'S" or
@@ -778,6 +894,7 @@ class MinuteSymbol(RightExponent):
         sign = -1 if value < 0 else 1
         return value + sign * vm.get(right) / 3600
 
+
 class SecondSymbol(RightExponent):
     # postfix ": the S in a DMS literal (D°M'S"). Always the last
     # component - nothing can follow seconds - so always applies the
@@ -788,40 +905,55 @@ class SecondSymbol(RightExponent):
         value = vm.get(left)
         return value if vm.degree_mode else math.radians(value)
 
+
 class RadianSymbol(RightExponent):
     # postfix r: the mirror image of ° - treats its operand as radians
     # regardless of the current angle mode
-    token = 'r'
+    token = "r"
 
     def run(self, vm, left, right):
         value = vm.get(left)
         return math.degrees(value) if vm.degree_mode else value
 
+
 class sinh(MathExprFunction):
-    def call(self, vm, arg): return math.sinh(arg)
+    def call(self, vm, arg):
+        return math.sinh(arg)
+
 
 class cosh(MathExprFunction):
-    def call(self, vm, arg): return math.cosh(arg)
+    def call(self, vm, arg):
+        return math.cosh(arg)
+
 
 class tanh(MathExprFunction):
-    def call(self, vm, arg): return math.tanh(arg)
+    def call(self, vm, arg):
+        return math.tanh(arg)
+
 
 class asinh(MathExprFunction):
-    token = 'sinh-1'
+    token = "sinh-1"
 
-    def call(self, vm, arg): return math.asinh(arg)
+    def call(self, vm, arg):
+        return math.asinh(arg)
+
 
 class acosh(MathExprFunction):
-    token = 'cosh-1'
+    token = "cosh-1"
 
-    def call(self, vm, arg): return math.acosh(arg)
+    def call(self, vm, arg):
+        return math.acosh(arg)
+
 
 class atanh(MathExprFunction):
-    token = 'tanh-1'
+    token = "tanh-1"
 
-    def call(self, vm, arg): return math.atanh(arg)
+    def call(self, vm, arg):
+        return math.atanh(arg)
+
 
 # probability
+
 
 class nPr(Operator):
     # TODO: nPr and nCr should support lists
@@ -830,14 +962,18 @@ class nPr(Operator):
     def op(self, left, right):
         return math.factorial(left) // math.factorial((left - right))
 
+
 class nCr(Operator):
     priority = Pri.PROB
 
     def op(self, left, right):
-        return math.factorial(left) // (math.factorial(right) * math.factorial((left - right)))
+        return math.factorial(left) // (
+            math.factorial(right) * math.factorial((left - right))
+        )
+
 
 class Factorial(Exponent):
-    token = '!'
+    token = "!"
 
     def op(self, left, right):
         return math.factorial(left)
@@ -845,7 +981,9 @@ class Factorial(Exponent):
     def fill_right(self):
         return Value(None)
 
+
 # random numbers
+
 
 class rand(Variable):
     def get(self, vm):
@@ -854,10 +992,17 @@ class rand(Variable):
     def set(self, vm, value):
         random.seed(value)
 
-class rand(Function):
+
+# rand is defined twice: once as a Variable (bare `rand` returns a random
+# number) and once as a Function (`rand(n)` returns a list of n random numbers).
+# Both definitions are intentional — each registers under a different base class
+# in the token registry via the Tracker metaclass, so both are reachable at
+# runtime even though the module-level name only holds the second definition.
+class rand(Function):  # noqa: F811
     def call(self, vm, args):
         assert len(args) == 1
         return [random.random() for i in range(args[0])]
+
 
 class randInt(Function):
     def call(self, vm, args):
@@ -871,6 +1016,7 @@ class randInt(Function):
 
         return [random.randint(*args[:2]) for i in range(args[2])]
 
+
 class randNorm(Function):
     def call(self, vm, args):
         assert len(args) in (2, 3)
@@ -882,34 +1028,43 @@ class randNorm(Function):
 
         return [random.normalvariate(*args) for i in range(n)]
 
+
 class randBin(Function):
     def call(self, vm, args):
-        raise NotImplementedError # numpy.random has a binomial distribution, or I could write my own...
+        # numpy.random has a binomial distribution, or I could write my own...
+        raise NotImplementedError
+
 
 class randM(Function):
     def call(self, vm, args):
-        raise NotImplementedError # I don't know how I'm going to do lists and matricies yet
+        # I don't know how I'm going to do lists and matrices yet
+        raise NotImplementedError
+
 
 # boolean
 
+
 class And(Bool):
-    token = 'and'
+    token = "and"
 
     def bool(self, left, right):
         return left and right
 
+
 class Or(Bool):
-    token = 'or'
+    token = "or"
 
     def bool(self, left, right):
         return left or right
+
 
 class xor(Bool):
     def bool(self, left, right):
         return left ^ right
 
+
 class Not(Function):
-    token = 'not'
+    token = "not"
 
     def get(self, vm):
         args = vm.get(self.arg)
@@ -917,54 +1072,66 @@ class Not(Function):
 
         return int(bool(not args[0]))
 
+
 # logic
 
+
 class Equals(Logic):
-    token = '='
+    token = "="
 
     def bool(self, left, right):
         return left == right
 
+
 class NotEquals(Logic):
-    token = '~='
+    token = "~="
 
     def bool(self, left, right):
         return left != right
 
+
 class NotEqualsToken(NotEquals):
-    token = u'≠'
+    token = "≠"
+
 
 class LessThan(Logic):
-    token = '<'
+    token = "<"
 
     def bool(self, left, right):
         return left < right
 
+
 class GreaterThan(Logic):
-    token = '>'
+    token = ">"
 
     def bool(self, left, right):
         return left > right
 
+
 class LessOrEquals(Logic):
-    token = '<='
+    token = "<="
 
     def bool(self, left, right):
         return left <= right
 
+
 class LessOrEqualsToken(LessOrEquals):
-    token = u'≤'
+    token = "≤"
+
 
 class GreaterOrEquals(Logic):
-    token = '>='
+    token = ">="
 
     def bool(self, left, right):
         return left >= right
 
+
 class GreaterOrEqualsToken(GreaterOrEquals):
-    token = u'≥'
+    token = "≥"
+
 
 # string manipulation
+
 
 class inString(Function):
     def call(self, vm, args):
@@ -977,26 +1144,31 @@ class inString(Function):
             skip = args[2]
         return haystack.find(needle, skip)
 
+
 class sub(Function):
     def call(self, vm, args):
         assert len(args) == 3
         s = args[0]
         a, b = args[1], args[2]
         assert a > 0 and b < len(s)
-        return s[a - 1:a - 1 + b]
+        return s[a - 1 : a - 1 + b]
+
 
 class length(Function):
     def call(self, vm, args):
         assert len(args) == 1
         return len(args[0])
 
+
 class toString(MathExprFunction):
     def call(self, vm, arg):
         if isinstance(arg, str):
-            raise ExecutionError('ERR:DATA TYPE')
+            raise ExecutionError("ERR:DATA TYPE")
         return str(vm.disp_round(arg))
 
+
 # control flow
+
 
 class Block(StubToken):
     absorbs = (Expression, Value)
@@ -1028,10 +1200,11 @@ class Block(StubToken):
                 if thens == 0:
                     return row, col, token
 
+
 class If(Block):
     def run(self, vm):
-        if self.arg == None:
-            raise ExecutionError('If statement without condition')
+        if self.arg is None:
+            raise ExecutionError("If statement without condition")
 
         true = bool(vm.get(self.arg))
 
@@ -1050,18 +1223,23 @@ class If(Block):
                     vm.goto(row, col)
                     vm.inc()
                 else:
-                    raise StopError('If/Then could not find End on negative expression')
+                    raise StopError("If/Then could not find End on negative expression")
         elif true:
             vm.run(cur)
         else:
             vm.inc_row()
 
-    def resume(self, vm, row, col): pass
-    def stop(self, vm, row, col): pass
+    def resume(self, vm, row, col):
+        pass
+
+    def stop(self, vm, row, col):
+        pass
+
 
 class Then(Token):
     def run(self, vm):
-        raise ExecutionError('cannot execute a standalone Then statement')
+        raise ExecutionError("cannot execute a standalone Then statement")
+
 
 class Else(Token):
     def run(self, vm):
@@ -1071,15 +1249,16 @@ class Else(Token):
         if end:
             row, col, end = end
         else:
-            raise StopError('Else could not find End')
+            raise StopError("Else could not find End")
 
         vm.goto(row, col)
         vm.inc()
 
+
 class Loop(Block, Stub):
     def run(self, vm):
-        if self.arg == None:
-            raise ExecutionError('%s statement without condition' % self.token)
+        if self.arg is None:
+            raise ExecutionError("%s statement without condition" % self.token)
 
         row, col, _ = vm.running[-1]
         self.resume(vm, row, col)
@@ -1101,18 +1280,21 @@ class Loop(Block, Stub):
         if end:
             row, col, end = end
         else:
-            raise StopError('%s could not find End' % self.token)
+            raise StopError("%s could not find End" % self.token)
 
         vm.goto(row, col)
         vm.inc()
+
 
 class While(Loop):
     def loop(self, vm):
         return bool(vm.get(self.arg))
 
+
 class Repeat(Loop):
     def loop(self, vm):
         return not bool(vm.get(self.arg))
+
 
 class For(Loop, Function):
     pos = None
@@ -1136,16 +1318,22 @@ class For(Loop, Function):
                 self.pos += inc
 
             var.set(vm, self.pos)
-            if forward and self.pos > vm.get(end) or not forward and self.pos < vm.get(end):
+            if (
+                forward
+                and self.pos > vm.get(end)
+                or not forward
+                and self.pos < vm.get(end)
+            ):
                 return False
             else:
                 return True
         else:
-            raise ExecutionError('incorrect arguments to For loop')
+            raise ExecutionError("incorrect arguments to For loop")
 
     def stop(self, vm, row, col):
         self.pos = None
         Loop.stop(self, vm, row, col)
+
 
 class End(Token):
     def run(self, vm):
@@ -1155,6 +1343,7 @@ class End(Token):
         except ExecutionError:
             pass
 
+
 class Continue(Token):
     def run(self, vm):
         for row, col, block in reversed(vm.blocks):
@@ -1162,17 +1351,19 @@ class Continue(Token):
                 block.resume(vm, row, col)
                 break
         else:
-            raise ExecutionError('Continue could not find a block to continue')
+            raise ExecutionError("Continue could not find a block to continue")
+
 
 class Break(Token):
     def run(self, vm):
         for i, (row, col, block) in enumerate(reversed(vm.blocks)):
             if not isinstance(block, If):
                 block.stop(vm, row, col)
-                vm.blocks = vm.blocks[:-i - 1]
+                vm.blocks = vm.blocks[: -i - 1]
                 break
         else:
-            raise ExecutionError('Break could not find a block to end')
+            raise ExecutionError("Break could not find a block to end")
+
 
 class Lbl(StubToken):
     absorbs = (Expression, Value)
@@ -1201,15 +1392,17 @@ class Lbl(StubToken):
                     parts.append(str(token.value))
                 elif isinstance(token, Variable):
                     parts.append(token.token)
-            label = ''.join(parts)
+            label = "".join(parts)
 
         return str(label)
 
     def get_label(self, vm):
         return Lbl.guess_label(vm, self.arg)
 
+
 class Goto(Token):
     absorbs = (Expression, Value)
+
     def run(self, vm):
         Goto.goto(vm, self.arg)
 
@@ -1222,10 +1415,11 @@ class Goto(Token):
                     vm.goto(row, col)
                     return
 
-        raise ExecutionError('could not find a label to Goto: %s' % token)
+        raise ExecutionError("could not find a label to Goto: %s" % token)
+
 
 class IsGreaterThanSkip(Function):
-    token = 'IS>'
+    token = "IS>"
 
     def run(self, vm):
         assert self.arg and len(self.arg) == 2
@@ -1237,8 +1431,9 @@ class IsGreaterThanSkip(Function):
         if new > vm.get(value):
             vm.inc_row()
 
+
 class DsLessThanSkip(Function):
-    token = 'DS<'
+    token = "DS<"
 
     def run(self, vm):
         assert self.arg and len(self.arg) == 2
@@ -1249,6 +1444,7 @@ class DsLessThanSkip(Function):
 
         if new < vm.get(value):
             vm.inc_row()
+
 
 class Menu(Function):
     def run(self, vm):
@@ -1265,12 +1461,13 @@ class Menu(Function):
             # unevaluated token: Goto.goto() (via Lbl.guess_label) needs
             # its parse-tree shape, not a plain value, to resolve the jump
             # target.
-            menu = (vm.get(title), list(zip(vm.get(*descs), labels))),
+            menu = ((vm.get(title), list(zip(vm.get(*descs), labels))),)
 
             label = vm.io.menu(menu)
             Goto.goto(vm, label)
         else:
-            raise ExecutionError('Invalid arguments to Menu(): %s' % args)
+            raise ExecutionError("Invalid arguments to Menu(): %s" % args)
+
 
 class Pause(Token):
     absorbs = (Expression, Variable)
@@ -1282,31 +1479,39 @@ class Pause(Token):
         else:
             vm.io.pause()
 
+
 class Stop(Token):
     def run(self, vm):
         raise StopError
+
 
 class Return(Token):
     def run(self, vm):
         raise ReturnError
 
+
 # input/output
+
 
 class ClrHome(Token):
     def run(self, vm):
         vm.io.clear()
 
+
 class Radian(Token):
     def run(self, vm):
         vm.degree_mode = False
+
 
 class Degree(Token):
     def run(self, vm):
         vm.degree_mode = True
 
+
 class Float(Token):
     def run(self, vm):
         vm.fixed = -1
+
 
 class Fix(Token):
     absorbs = (Value, Expression)
@@ -1318,6 +1523,7 @@ class Fix(Token):
 
         vm.fixed = arg
 
+
 class Disp(Token):
     absorbs = (Expression, Variable, Tuple)
 
@@ -1325,10 +1531,10 @@ class Disp(Token):
     def format_matrix(data):
         if isinstance(data, int):
             return data
-        out = '[' + str(data[0])
+        out = "[" + str(data[0])
         for row in data[1:]:
-            out += '\n ' + str(row)
-        out += ']'
+            out += "\n " + str(row)
+        out += "]"
         return out
 
     def run(self, vm):
@@ -1365,14 +1571,16 @@ class Disp(Token):
         for msg in msgs:
             vm.io.disp(vm.disp_round(msg))
 
+
 class Print(Disp):
     absorbs = (Expression, Variable, Tuple)
 
     def disp(self, vm, *msgs):
         if isinstance(msgs, (tuple, list)):
-            vm.io.disp(', '.join(str(vm.disp_round(x)) for x in msgs))
+            vm.io.disp(", ".join(str(vm.disp_round(x)) for x in msgs))
         else:
             vm.io.disp(vm.disp_round(msgs))
+
 
 class Output(Function):
     def run(self, vm):
@@ -1380,12 +1588,13 @@ class Output(Function):
         row, col, msg = vm.get(self.arg)
         vm.io.output(row, col, vm.disp_round(msg))
 
+
 class Prompt(Token):
     absorbs = (Expression, Variable, Tuple)
 
     def run(self, vm):
         if not self.arg:
-            raise ExecutionError('%s used without arguments')
+            raise ExecutionError("%s used without arguments")
 
         if isinstance(self.arg, Tuple):
             for var in self.arg.contents:
@@ -1396,11 +1605,12 @@ class Prompt(Token):
     def prompt(self, vm, var):
         if isinstance(var, Expression):
             var = var.flatten()
-        val = vm.io.input(var.token + '?')
+        val = vm.io.input(var.token + "?")
         var.set(vm, val)
 
     def __repr__(self):
-        return 'Prompt(%s)' % repr(self.arg)
+        return "Prompt(%s)" % repr(self.arg)
+
 
 class Input(Token):
     absorbs = (Expression, Variable, Tuple)
@@ -1408,16 +1618,16 @@ class Input(Token):
     def run(self, vm):
         arg = self.arg
         if not arg:
-            raise ExecutionError('Input used without arguments')
+            raise ExecutionError("Input used without arguments")
 
         if isinstance(arg, Tuple) and len(arg) == 1 or isinstance(arg, Variable):
             self.prompt(vm, arg)
         elif isinstance(arg, Tuple) and len(arg) == 2:
             self.prompt(vm, arg.contents[1], vm.get(arg.contents[0]))
         else:
-            raise ExecutionError('Input used with wrong number of arguments')
+            raise ExecutionError("Input used with wrong number of arguments")
 
-    def prompt(self, vm, var, msg='?'):
+    def prompt(self, vm, var, msg="?"):
         if isinstance(var, Expression):
             var = var.flatten()
 
@@ -1429,9 +1639,11 @@ class Input(Token):
         val = vm.io.input(msg, is_str)
         var.set(vm, val)
 
+
 class getKey(Variable):
     def get(self, vm):
         return vm.io.getkey()
+
 
 class prgm(Token):
     done = False
@@ -1444,13 +1656,14 @@ class prgm(Token):
         return False
 
     def __init__(self):
-        self.name = ''
+        self.name = ""
 
     def run(self, vm):
         vm.run_prgm(self.name)
 
     def __repr__(self):
-        return 'prgm' + self.name
+        return "prgm" + self.name
+
 
 class REPL(Token):
     def run(self, vm):
@@ -1458,7 +1671,7 @@ class REPL(Token):
 
         if vm.repl_serial != vm.serial:
             vm.repl_serial = vm.serial
-            ans = vm.vars.get('Ans')
+            ans = vm.vars.get("Ans")
             if ans is not None:
                 d = Disp()
                 d.arg = Ans()
@@ -1469,7 +1682,7 @@ class REPL(Token):
             repl_line = None
             while not repl_line:
                 try:
-                    repl_line = input('>>> ')
+                    repl_line = input(">>> ")
                 except KeyboardInterrupt:
                     print()
                 except EOFError:
@@ -1478,7 +1691,7 @@ class REPL(Token):
 
             if not code:
                 try:
-                    code = Parser(repl_line + '\n').parse()
+                    code = Parser(repl_line + "\n").parse()
                 except ParseError as e:
                     print(e)
 
@@ -1487,10 +1700,13 @@ class REPL(Token):
 
         vm.line, vm.col = self.line, self.col
 
+
 # date/time commands
+
 
 def _now(vm):
     return datetime.datetime.now() + vm.clock_offset
+
 
 class dayOfWk(Function):
     def call(self, vm, args):
@@ -1498,24 +1714,30 @@ class dayOfWk(Function):
         date = datetime.datetime(year=args[0], month=args[1], day=args[2])
         return date.isoweekday() % 7 + 1
 
+
 class getDate(Variable):
     def get(self, vm):
         now = _now(vm)
         return [now.year, now.month, now.day]
+
 
 class getTime(Variable):
     def get(self, vm):
         now = _now(vm)
         return [now.hour, now.minute, now.second]
 
+
 class setDate(Function):
     def call(self, vm, args):
         assert len(args) == 3
         y, m, d = (int(a) for a in args)
         now = _now(vm)
-        target = datetime.datetime(y, m, d, now.hour, now.minute, now.second, now.microsecond)
+        target = datetime.datetime(
+            y, m, d, now.hour, now.minute, now.second, now.microsecond
+        )
         vm.clock_offset = target - datetime.datetime.now()
         return [y, m, d]
+
 
 class setTime(Function):
     def call(self, vm, args):
@@ -1526,31 +1748,36 @@ class setTime(Function):
         vm.clock_offset = target - datetime.datetime.now()
         return [h, mi, s]
 
+
 class getDtFmt(Variable):
     def get(self, vm):
         return vm.date_fmt
+
 
 class setDtFmt(Function):
     def call(self, vm, args):
         assert len(args) == 1
         fmt = int(args[0])
         if fmt not in (1, 2, 3):
-            raise ExecutionError('ERR:ARGUMENT')
+            raise ExecutionError("ERR:ARGUMENT")
         vm.date_fmt = fmt
         return fmt
+
 
 class getTmFmt(Variable):
     def get(self, vm):
         return vm.time_fmt
+
 
 class setTmFmt(Function):
     def call(self, vm, args):
         assert len(args) == 1
         fmt = int(args[0])
         if fmt not in (12, 24):
-            raise ExecutionError('ERR:ARGUMENT')
+            raise ExecutionError("ERR:ARGUMENT")
         vm.time_fmt = fmt
         return fmt
+
 
 class getDtStr(Function):
     def call(self, vm, args):
@@ -1559,12 +1786,13 @@ class getDtStr(Function):
         now = _now(vm)
         year = now.year % 100
         if fmt == 1:
-            return '%02d/%02d/%02d' % (now.month, now.day, year)
+            return "%02d/%02d/%02d" % (now.month, now.day, year)
         elif fmt == 2:
-            return '%02d/%02d/%02d' % (now.day, now.month, year)
+            return "%02d/%02d/%02d" % (now.day, now.month, year)
         elif fmt == 3:
-            return '%02d/%02d/%02d' % (year, now.month, now.day)
-        raise ExecutionError('ERR:ARGUMENT')
+            return "%02d/%02d/%02d" % (year, now.month, now.day)
+        raise ExecutionError("ERR:ARGUMENT")
+
 
 class getTmStr(Function):
     def call(self, vm, args):
@@ -1573,20 +1801,23 @@ class getTmStr(Function):
         now = _now(vm)
         if fmt == 12:
             hour = now.hour % 12 or 12
-            ampm = 'AM' if now.hour < 12 else 'PM'
-            return '%d:%02d %s' % (hour, now.minute, ampm)
+            ampm = "AM" if now.hour < 12 else "PM"
+            return "%d:%02d %s" % (hour, now.minute, ampm)
         elif fmt == 24:
-            return '%02d:%02d' % (now.hour, now.minute)
-        raise ExecutionError('ERR:ARGUMENT')
+            return "%02d:%02d" % (now.hour, now.minute)
+        raise ExecutionError("ERR:ARGUMENT")
+
 
 class startTmr(Variable):
     def get(self, vm):
         return int(time.time())
 
+
 class checkTmr(Function):
     def call(self, vm, args):
         assert len(args) == 1
         return int(time.time()) - int(args[0])
+
 
 class timeCnv(Function):
     def call(self, vm, args):
@@ -1597,10 +1828,12 @@ class timeCnv(Function):
         minutes, seconds = divmod(seconds, 60)
         return [days, hours, minutes, seconds]
 
+
 # file IO (not in original TI-Basic)
+
 
 class ReadFile(Function):
     def call(self, vm, args):
         assert len(args) == 1
-        with open(args[0], 'r') as f:
+        with open(args[0], "r") as f:
             return f.read()

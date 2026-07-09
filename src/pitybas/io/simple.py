@@ -1,5 +1,5 @@
 try:
-    import readline
+    import readline  # noqa: F401 - imported for side effects (enables input history in the REPL)
 except ImportError:
     pass
 
@@ -10,13 +10,13 @@ from pitybas.io.base import IOBase
 
 class IO(IOBase):
     def clear(self):
-        print('-'*16)
+        print("-" * 16)
 
     def input(self, msg, is_str=False):
         while True:
             try:
                 if msg:
-                    print(msg, end=' ')
+                    print(msg, end=" ")
 
                 line = input()
                 if not is_str:
@@ -26,7 +26,7 @@ class IO(IOBase):
 
                 return val
             except ParseError:
-                print('ERR:DATA')
+                print("ERR:DATA")
                 print()
 
     def getkey(self):
@@ -35,12 +35,13 @@ class IO(IOBase):
     def output(self, x, y, msg):
         print(msg)
 
-    def disp(self, msg=''):
+    def disp(self, msg=""):
         print(msg)
 
-    def pause(self, msg=''):
-        if msg: self.disp(msg)
-        self.input('[press enter]', True)
+    def pause(self, msg=""):
+        if msg:
+            self.disp(msg)
+        self.input("[press enter]", True)
 
     def menu(self, menu):
         # menu is a tuple of (title, [(desc, label)]) -- title/desc are
@@ -51,16 +52,16 @@ class IO(IOBase):
             i = 1
 
             for title, entries in menu:
-                print('-[ %s ]-' % title)
+                print("-[ %s ]-" % title)
                 for name, label in entries:
-                    print('%i: %s' % (i, name))
+                    print("%i: %s" % (i, name))
                     lookup.append(label)
                     i += 1
 
-            choice = self.input('choice?', True)
+            choice = self.input("choice?", True)
             print()
             if choice.isdigit() and 0 < int(choice) <= len(lookup):
-                label = lookup[int(choice)-1]
+                label = lookup[int(choice) - 1]
                 return label
             else:
-                print('invalid choice')
+                print("invalid choice")

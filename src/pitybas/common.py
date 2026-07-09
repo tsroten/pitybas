@@ -1,16 +1,30 @@
 class Error(Exception):
-       def __init__(self, msg):
-           self.msg = msg
+    def __init__(self, msg):
+        self.msg = msg
 
-       def __str__(self):
-           return self.msg
+    def __str__(self):
+        return self.msg
 
-class StopError(Exception): pass
-class ReturnError(Exception): pass
 
-class ParseError(Error): pass
-class ExecutionError(Error): pass
-class ExpressionError(Error): pass
+class StopError(Exception):
+    pass
+
+
+class ReturnError(Exception):
+    pass
+
+
+class ParseError(Error):
+    pass
+
+
+class ExecutionError(Error):
+    pass
+
+
+class ExpressionError(Error):
+    pass
+
 
 class Pri:
     # evaluation happens in the following order:
@@ -37,5 +51,6 @@ class Pri:
     BOOL = 5
     SET = 6
 
+
 def is_number(num):
-    return str(num).lstrip('-').replace('.', '', 1).isdigit()
+    return str(num).lstrip("-").replace(".", "", 1).isdigit()
