@@ -993,6 +993,11 @@ class rand(Variable):
         random.seed(value)
 
 
+# rand is defined twice: once as a Variable (bare `rand` returns a random
+# number) and once as a Function (`rand(n)` returns a list of n random numbers).
+# Both definitions are intentional — each registers under a different base class
+# in the token registry via the Tracker metaclass, so both are reachable at
+# runtime even though the module-level name only holds the second definition.
 class rand(Function):  # noqa: F811
     def call(self, vm, args):
         assert len(args) == 1

@@ -49,9 +49,16 @@ def test_menu_label_stays_an_unevaluated_token_for_goto():
 
 
 def test_menu_choosing_second_option_reaches_its_label():
+    program = (
+        'Menu("TITLE","OPT1",A,"OPT2",B)\n'
+        'Disp "no\n'
+        "Lbl A\n"
+        'Disp "wrong\n'
+        "Lbl B\n"
+        'Disp "right'
+    )
     vm = make_menu_vm(
-        'Menu("TITLE","OPT1",A,"OPT2",B)\nDisp "no\nLbl A\nDisp "wrong'
-        '\nLbl B\nDisp "right',
+        program,
         lambda io, menu: next(iter(menu))[1][1][1],
     )
     assert vm.io.disps == ["right"]

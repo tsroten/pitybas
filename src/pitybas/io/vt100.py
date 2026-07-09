@@ -1,5 +1,5 @@
 try:
-    import readline  # noqa: F401
+    import readline  # noqa: F401 - imported for side effects (enables input history in the REPL)
 except ImportError:
     pass
 
