@@ -308,3 +308,12 @@ class IO(IOBase):
 
     def draw_circle(self, x, y, r, on):
         pass
+
+    def pxl_on(self, row, col):
+        pass
+
+    def pxl_off(self, row, col):
+        pass
+
+    def pxl_change(self, row, col, on):
+        pass

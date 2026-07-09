@@ -1568,6 +1568,63 @@ class PtChange(PtFunction):
     on = None
 
 
+class PxlFunction(Function, Stub):
+    # True to turn the pixel on, False to turn it off, None to toggle
+    on = None
+
+    def call(self, vm, args):
+        assert len(args) == 2
+        row, col = args[0], args[1]
+
+        if not (0 <= row <= MAX_ROW and 0 <= col <= MAX_COL):
+            return
+
+        on = self.on if self.on is not None else not vm.graph.get_pixel(col, row)
+
+        vm.graph.set_pixel(col, row, on)
+        self.notify(vm, row, col, on)
+
+    def notify(self, vm, row, col, on):
+        raise NotImplementedError
+
+
+class PxlOn(PxlFunction):
+    token = "Pxl-On"
+    on = True
+
+    def notify(self, vm, row, col, on):
+        vm.io.pxl_on(row, col)
+
+
+class PxlOff(PxlFunction):
+    token = "Pxl-Off"
+    on = False
+
+    def notify(self, vm, row, col, on):
+        vm.io.pxl_off(row, col)
+
+
+class PxlChange(PxlFunction):
+    token = "Pxl-Change"
+    on = None
+
+    def notify(self, vm, row, col, on):
+        vm.io.pxl_change(row, col, on)
+
+
+class PxlTest(Function):
+    token = "Pxl-Test"
+
+    def call(self, vm, args):
+        assert len(args) == 2
+        row, col = args[0], args[1]
+
+        if not (0 <= row <= MAX_ROW and 0 <= col <= MAX_COL):
+            return 0
+
+        return 1 if vm.graph.get_pixel(col, row) else 0
+
+
 def _clip_segment(graph, x1, y1, x2, y2):
     """Clip (x1,y1)-(x2,y2) to the graph window (Liang-Barsky).
 

@@ -99,3 +99,31 @@ class IOBase(ABC):
                 token (not clipped to the window).
             on: True if the circle was drawn, False if erased.
         """
+
+    @abstractmethod
+    def pxl_on(self, row, col):
+        """Render a Pxl-On( turning the pixel at (row, col) on.
+
+        Args:
+            row: Pixel row, 0-62.
+            col: Pixel column, 0-94.
+        """
+
+    @abstractmethod
+    def pxl_off(self, row, col):
+        """Render a Pxl-Off( turning the pixel at (row, col) off.
+
+        Args:
+            row: Pixel row, 0-62.
+            col: Pixel column, 0-94.
+        """
+
+    @abstractmethod
+    def pxl_change(self, row, col, on):
+        """Render a Pxl-Change( toggling the pixel at (row, col).
+
+        Args:
+            row: Pixel row, 0-62.
+            col: Pixel column, 0-94.
+            on: The pixel's new state after the toggle.
+        """
