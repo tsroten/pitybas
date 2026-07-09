@@ -12,7 +12,7 @@ def get(f):
 
 class Tracker(type):
     def __new__(self, name, bases, attrs):
-        if not 'token' in attrs:
+        if 'token' not in attrs:
             attrs['token'] = name
 
         attrs.update({
