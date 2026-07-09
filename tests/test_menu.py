@@ -1,5 +1,5 @@
 from pitybas.interpret import Interpreter
-from conftest import MockIO
+from mock_io import MockIO
 
 
 def make_menu_vm(source, menu_fn):

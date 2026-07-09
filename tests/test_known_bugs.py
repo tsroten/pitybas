@@ -82,7 +82,8 @@ import types
 
 import pytest
 
-from conftest import MockIO, run
+from conftest import run
+from mock_io import MockIO
 
 
 def disp_of(source):
