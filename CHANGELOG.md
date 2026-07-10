@@ -10,6 +10,9 @@
 - Added `ScriptedIO`, a public `pitybas.io` backend for headlessly driving a program in tests and asserting on what it displayed/drew (replaces the test-only `MockIO`)
 - Added an `IOBase` abstract base class formalizing the IO backend contract shared by `simple`/`vt100`/`ScriptedIO`
 
+### Changed
+- Bumped supported Python versions to 3.11-3.14 (`requires-python >=3.11`), updated Trove classifiers, and updated GitHub Actions test/build/publish workflows to run on 3.11-3.14 (using 3.14 for lint/build/publish jobs)
+
 ### Fixed
 - Fixed the `×√` operator returning floating-point noise for perfect roots (e.g. `3×√1000` now returns exactly `10`) and raising a Python complex-number error instead of `ERR:NONREAL ANS` for even roots of negative numbers
 - Fixed `StorePic`/`RecallPic`/`StoreGDB`/`RecallGDB` raising a bare `AssertionError` (silently disabled under `python -O`) instead of `ERR:DOMAIN` for out-of-range or non-integer slot numbers
