@@ -311,6 +311,52 @@ fetched here covered CATALOG hyperbolic entries, not the ANGLE/TEST menu inverse
 entries directly — treat the non-hyperbolic glyph identity as consistent-by-analogy
 rather than independently re-confirmed in this pass.
 
+## PRGM CTL / PRGM I/O (Chapter 16, p.281-294)
+
+The `PRGM` key's two token menus, in guidebook order, confirmed against pitybas:
+
+**PRGM CTL** (`PRGM` from the program editor, p.281):
+
+| # | Command | pitybas | Notes |
+|---|---|---|---|
+| 1 | `If` | ✅ | |
+| 2 | `Then` | ✅ | |
+| 3 | `Else` | ✅ | |
+| 4 | `For(` | ✅ | |
+| 5 | `While` | ✅ | |
+| 6 | `Repeat` | ✅ | |
+| 7 | `End` | ✅ | |
+| 8 | `Pause` | ✅ | Optional `value` arg to display and scroll (p.284) — not cross-checked for exact parity in this pass. |
+| 9 | `Lbl` | ✅ | |
+| 0 | `Goto` | ✅ | |
+| A | `IS>(` | ✅ | `tokens.py`'s `IsGreaterThanSkip`, `token = "IS>"` — matches `IS>(variable,value)` exactly (p.286). |
+| B | `DS<(` | ✅ | `tokens.py`'s `DsLessThanSkip`, `token = "DS<"` — matches `DS<(variable,value)` exactly (p.286). |
+| C | `Menu(` | ✅ | |
+| D | `prgm` | ✅ | |
+| E | `Return` | ✅ | |
+| F | `Stop` | ✅ | |
+| G | `DelVar` | ✅ | |
+| H | `GraphStyle(` | ❌ | `GraphStyle(function#,graphstyle#)` sets a `Yn` function's draw style (1=line...7=dot, p.287-288) — genuinely missing (`grep -n "GraphStyle" src/pitybas/tokens.py` finds nothing, and it's not mentioned in `TODO.md`/`CHANGELOG.md`). Blocked on `Y1`-`Y9` existing (Linear **THO-18**); GDB's 5th stored element ("graph style for each Y= function", see DRAW/GDB section above) also depends on this. |
+| I | `OpenLib(` | ❌ | Guidebook itself says "No longer used" (p.281) — dead on real hardware too, not a real gap. |
+| J | `ExecLib(` | ❌ | Same as `OpenLib(` — "No longer used." |
+
+**PRGM I/O** (`PRGM` ▶ from the program editor, p.288):
+
+| # | Command | pitybas | Notes |
+|---|---|---|---|
+| 1 | `Input` | ✅ | |
+| 2 | `Prompt` | ✅ | |
+| 3 | `Disp` | ✅ | |
+| 4 | `DispGraph` | ❌ | Displays the current graph (p.291) — genuinely missing (no class in `tokens.py`). This is exactly Linear **THO-18**'s task 2, which explicitly renames its originally-scoped `Graph` token to the real `DispGraph` name once it lands. |
+| 5 | `DispTable` | ❌ | pitybas has **no Table subsystem at all** — no `TblStart`/`ΔTbl`, nothing from Chapter 7 ("Tables", p.115-118) is implemented, and it isn't mentioned in `TODO.md` or any open Linear issue found. `DispTable` is blocked on that entire feature. |
+| 6 | `Output(` | ✅ | `Output(row,column,value)`, row 1-8, column 1-16 (p.291) — domain bounds not cross-checked against pitybas's implementation in this pass. |
+| 7 | `getKey` | ✅ | Key-code diagram (p.292) not cross-checked against pitybas's key-code constants in this pass. |
+| 8 | `ClrHome` | ✅ | |
+| 9 | `ClrTable` | ❌ | Same Table-subsystem gap as `DispTable`. |
+| 0 | `GetCalc(` | ❌ | Calculator-to-calculator variable transfer over USB/I/O port (p.292-293). No other calculator exists in a headless interpreter — plausibly out-of-scope-by-design rather than a real gap, similar to `Pen` (see DRAW menu section above), but flagging it here since it wasn't previously noted anywhere. |
+| A | `Get(` | ❌ | Reads data from a CBL2/CBR probe device (p.293) — same "no physical device to talk to" reasoning as `GetCalc(`. |
+| B | `Send(` | ❌ | Sends data to a CBL2/CBR probe device (p.293) — same reasoning. |
+
 ## Not covered in this pass
 
 Time/scope-boxed this research to the topics above (matching `AGENTS.md`'s list plus the
@@ -318,8 +364,6 @@ open Linear scope). Not fetched from the guidebook in this pass, and therefore *
 verified against primary source: polar/rectangular conversions (`R►Pr(`, `R►Pθ(`,
 `P►Rx(`, `P►Ry(`, `Angle(` — noted in `TODO.md` as unimplemented, angle-mode-dependent,
 no equivalent in pitybas), `►DMS` display conversion (also in `TODO.md`), complex-number
-mode and `►Polar`/`re^θi` display, the PRGM CTL/I/O instruction chapters (Chapter 16,
-covers `Menu(`, `Input`, `Prompt`, `Disp`, `Output(`, `Pause`, `Stop`, `Return`, `Lbl`/
-`Goto`, `IS>(`/`DS<(` — all already implemented in pitybas per `tokens.py`, just not
-cross-checked against the guidebook text in this pass), and the RTC clock chapter
-(already landed per CHANGELOG 0.5.0, not re-verified here).
+mode and `►Polar`/`re^θi` display, Chapter 7 (Tables, entirely unimplemented — see PRGM
+I/O section above), and the RTC clock chapter (already landed per CHANGELOG 0.5.0, not
+re-verified here).
