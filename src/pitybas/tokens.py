@@ -1567,6 +1567,66 @@ class ClrDraw(Token):
         vm.io.clr_draw()
 
 
+# Graph DataBase: the window variables that fully describe the current
+# viewing window, snapshotted by StoreGDB/RecallGDB. Extend this tuple to
+# include equation state once Y1-Y9 equations exist.
+GDB_ATTRS = ("xmin", "xmax", "xscl", "ymin", "ymax", "yscl", "axes_on")
+
+
+def pic_gdb_slot(vm, arg):
+    """Evaluate a StorePic/RecallPic/StoreGDB/RecallGDB slot argument.
+
+    Raises ERR:DOMAIN for anything other than an integer 0-9, matching how
+    other graph commands (e.g. Text() validate their arguments).
+    """
+    assert arg is not None
+    n = vm.get(arg)
+
+    if not isinstance(n, int) or not (0 <= n <= 9):
+        raise ExecutionError("ERR:DOMAIN")
+
+    return n
+
+
+class StorePic(Token):
+    absorbs = (Value, Expression)
+
+    def run(self, vm):
+        n = pic_gdb_slot(vm, self.arg)
+        vm.pics[n] = [row[:] for row in vm.graph.pixels]
+
+
+class RecallPic(Token):
+    absorbs = (Value, Expression)
+
+    def run(self, vm):
+        n = pic_gdb_slot(vm, self.arg)
+
+        if n in vm.pics:
+            vm.graph.pixels = [row[:] for row in vm.pics[n]]
+            vm.io.clr_draw()
+
+
+class StoreGDB(Token):
+    absorbs = (Value, Expression)
+
+    def run(self, vm):
+        n = pic_gdb_slot(vm, self.arg)
+        vm.gdbs[n] = {attr: getattr(vm.graph, attr) for attr in GDB_ATTRS}
+
+
+class RecallGDB(Token):
+    absorbs = (Value, Expression)
+
+    def run(self, vm):
+        n = pic_gdb_slot(vm, self.arg)
+
+        if n in vm.gdbs:
+            for attr, value in vm.gdbs[n].items():
+                setattr(vm.graph, attr, value)
+            vm.io.clr_draw()
+
+
 class PtFunction(Function, Stub):
     # True to turn the point on, False to turn it off, None to toggle
     on: Optional[bool] = None

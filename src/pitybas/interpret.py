@@ -59,6 +59,8 @@ class Interpreter(object):
         self.fixed = -1
         self.degree_mode = False
         self.graph = GraphState()
+        self.pics: dict = {}
+        self.gdbs: dict = {}
 
         # date/time clock: real wall-clock time offset by this amount, so
         # setDate(/setTime( can rewrite the "current" date/time without
