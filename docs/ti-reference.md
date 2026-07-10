@@ -1,10 +1,14 @@
 # TI-83 Plus / TI-84 Plus guidebook notes
 
 Curated notes from the official **TI-84 Plus and TI-84 Plus Silver Edition Guidebook**
-(`education.ti.com/html/eguides/graphing/84Plus/PDFs/TI-84-Plus-guidebook_EN.pdf`, OS
-2.53MP-era, 422 pages), cross-referenced against what `src/pitybas/tokens.py` and
+([education.ti.com/html/eguides/graphing/84Plus/PDFs/TI-84-Plus-guidebook_EN.pdf](https://education.ti.com/html/eguides/graphing/84Plus/PDFs/TI-84-Plus-guidebook_EN.pdf),
+OS 2.53MP-era, 422 pages), cross-referenced against what `src/pitybas/tokens.py` and
 `CHANGELOG.md` currently implement, plus the open/completed scoping in this project's
 Linear issues (the `Thomas Roten` workspace, `THO-*`).
+
+TI-84 Plus, TI-83 Plus, and the guidebook itself are trademarks/copyright of Texas
+Instruments; this file is unaffiliated fair-use commentary, and quotes short excerpts
+only where exact wording matters (see below) rather than reproducing the guidebook.
 
 This is **not** the TI-84 Plus CE guidebook — the CE targets a 320x240 color LCD and a
 different BASIC dialect. pitybas targets the monochrome 95x63-pixel grid (confirmed by
