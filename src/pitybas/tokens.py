@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
 import datetime
 import math
 import random
 import string
 import time
 from functools import reduce
+from typing import Any, Optional, Tuple as _Tuple, Type
 
 from .common import Pri, ExecutionError, StopError, ReturnError
 from .expression import Tuple, Expression, Arguments, ListExpr, MatrixExpr
@@ -36,7 +39,7 @@ class EOF(Token, Stub):
 
 
 class Const(Variable, Stub):
-    value = None
+    value: Any = None
 
     def set(self, vm, value):
         raise InvalidOperation
@@ -371,7 +374,7 @@ for i in range(10):
 
 
 class GraphVar(Variable, Stub):
-    graph_attr = None
+    graph_attr: Optional[str] = None
 
     def set(self, vm, value):
         setattr(vm.graph, self.graph_attr, value)
@@ -1058,7 +1061,7 @@ class rand(Variable):
 # Both definitions are intentional — each registers under a different base class
 # in the token registry via the Tracker metaclass, so both are reachable at
 # runtime even though the module-level name only holds the second definition.
-class rand(Function):  # noqa: F811
+class rand(Function):  # type: ignore[no-redef]  # noqa: F811
     def call(self, vm, args):
         assert len(args) == 1
         return [random.random() for i in range(args[0])]
@@ -1231,7 +1234,7 @@ class toString(MathExprFunction):
 
 
 class Block(StubToken):
-    absorbs = (Expression, Value)
+    absorbs: _Tuple[Type[Any], ...] = (Expression, Value)
 
     def find_end(self, vm, or_else=False, cur=False):
         tokens = vm.find(Block, Then, Else, End, wrap=False)
@@ -1626,7 +1629,7 @@ class RecallGDB(Token):
 
 class PtFunction(Function, Stub):
     # True to turn the point on, False to turn it off, None to toggle
-    on = None
+    on: Optional[bool] = None
 
     def call(self, vm, args):
         assert len(args) in (2, 3)
@@ -1660,7 +1663,7 @@ class PtChange(PtFunction):
 
 class PxlFunction(Function, Stub):
     # True to turn the pixel on, False to turn it off, None to toggle
-    on = None
+    on: Optional[bool] = None
 
     def call(self, vm, args):
         assert len(args) == 2

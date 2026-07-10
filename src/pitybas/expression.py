@@ -1,28 +1,35 @@
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Tuple as _Tuple, Type, TYPE_CHECKING
+
 from . import tokens
 from .common import ExpressionError, Pri, is_number
 
+if TYPE_CHECKING:
+    from .interpret import Interpreter
+
 
 class Base:
-    priority = Pri.NONE
+    priority: int = Pri.NONE
 
-    can_run = False
-    can_set = False
-    can_get = True
-    can_fill_left = False
-    can_fill_right = False
-    absorbs = ()
+    can_run: bool = False
+    can_set: bool = False
+    can_get: bool = True
+    can_fill_left: bool = False
+    can_fill_right: bool = False
+    absorbs: _Tuple[Type[Any], ...] = ()
 
-    end = None
+    end: Optional[str] = None
 
-    def __init__(self, *elements):
-        self.contents = []
-        self.raw = []
+    def __init__(self, *elements: Any) -> None:
+        self.contents: List[Any] = []
+        self.raw: List[Any] = []
         self.finished = False
 
         for e in elements:
             self.append(e)
 
-    def append(self, token):
+    def append(self, token: Any) -> None:
         if self.contents:
             prev = self.contents[-1]
 
@@ -64,11 +71,11 @@ class Base:
         self.raw.append(token)
         self.contents.append(token)
 
-    def extend(self, array):
+    def extend(self, array: Any) -> None:
         for x in array:
             self.append(x)
 
-    def flatten(self):
+    def flatten(self) -> Any:
         if len(self.contents) == 1:
             first = self.contents[0]
             if isinstance(first, Base):
@@ -78,7 +85,7 @@ class Base:
 
         return self
 
-    def fill(self):
+    def fill(self) -> None:
         # TODO: instead of this system, perhaps tokens should be able to specify
         # whether they need/want left/right params
         if not self.contents:
@@ -123,7 +130,7 @@ class Base:
 
         self.contents = new
 
-    def validate(self):
+    def validate(self) -> None:
         if not self.contents:
             return
 
@@ -140,6 +147,7 @@ class Base:
 
         # determine whether we have any tokens after a ->
         found_stor = False
+        stor_odd = 0
         for i in range(len(self.contents)):
             t = self.contents[i]
             odd = i % 2
@@ -153,12 +161,12 @@ class Base:
                     % self
                 )
 
-    def order(self):
+    def order(self) -> List[int]:
         # this step returns a list of ordered indicies
         # to help reduce tokens to a single value
         # see common.Pri for an ordering explanation
 
-        order = {}
+        order: Dict[int, List[int]] = {}
 
         for i in range(len(self.contents)):
             token = self.contents[i]
@@ -176,11 +184,11 @@ class Base:
 
         return ret
 
-    def get(self, vm):
+    def get(self, vm: "Interpreter") -> Any:
         self.fill()
         self.validate()
 
-        sub = []
+        sub: List[int] = []
         expr = self.contents[:]
         for i in self.order():
             n = 0
@@ -199,10 +207,10 @@ class Base:
 
         return vm.get(expr[0])
 
-    def finish(self):
+    def finish(self) -> None:
         self.finished = True
 
-    def close(self, char):
+    def close(self, char: str) -> Optional[bool]:
         for stack in reversed(self.contents):
             if isinstance(stack, Base):
                 if stack.close(char):
@@ -212,13 +220,15 @@ class Base:
             self.finish()
             return True
 
-    def __str__(self):
+        return None
+
+    def __str__(self) -> str:
         return "".join([a.token for a in self.raw])
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.contents)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "E(%s)" % (" ".join(repr(token) for token in self.contents))
 
 
@@ -226,17 +236,17 @@ bracket_map = {"(": ")", "{": "}", "[": "]"}
 
 
 class Expression(Base):
-    def set(self, vm, value):
+    def set(self, vm: "Interpreter", value: Any) -> None:
         if len(self.contents) == 1:
             self.contents[0].set(vm, value)
 
 
 class Bracketed(Base):
-    def __init__(self, end):
+    def __init__(self, end: str) -> None:
         self.end = bracket_map[end]
         Base.__init__(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "B(%s)" % (" ".join(repr(token) for token in self.contents))
 
 
@@ -247,10 +257,10 @@ class ParenExpr(Bracketed):
 class Tuple(Base):
     priority = Pri.INVALID
 
-    def __init__(self):
+    def __init__(self) -> None:
         Base.__init__(self)
 
-    def append(self, expr):
+    def append(self, expr: Any) -> None:
         if isinstance(expr, Base):
             expr = expr.flatten()
 
@@ -263,18 +273,18 @@ class Tuple(Base):
         expr = Expression(expr)
         self.contents.append(expr)
 
-    def sep(self):
+    def sep(self) -> None:
         if self.contents:
             self.contents[-1].finish()
 
-    def get(self, vm):
+    def get(self, vm: "Interpreter") -> List[Any]:
         return [vm.get(arg) for arg in self.contents]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.contents)
 
-    def __repr__(self):
-        def expr_repr(e):
+    def __repr__(self) -> str:
+        def expr_repr(e: Any) -> str:
             if not isinstance(e, Expression):
                 return "({})".format(e)
             else:
@@ -284,10 +294,10 @@ class Tuple(Base):
 
 
 class Arguments(Tuple, Bracketed):
-    def __init__(self, end):
+    def __init__(self, end: str) -> None:
         Bracketed.__init__(self, end)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "A(%s)" % (", ".join(repr(expr) for expr in self.contents))
 
 
@@ -299,7 +309,7 @@ class ListExpr(Arguments):
     priority = Pri.NONE
     end = "}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "L{%s}" % (", ".join(repr(expr) for expr in self.contents))
 
 
@@ -307,7 +317,7 @@ class MatrixExpr(Arguments):
     priority = Pri.NONE
     end = "]"
 
-    def append(self, expr):
+    def append(self, expr: Any) -> None:
         # Real hardware writes adjacent matrix literal rows with no
         # separator, e.g. "[[1,2][3,4]]" -- each row parses as its own
         # MatrixExpr. Without this, the inherited Tuple.append() would
@@ -320,5 +330,5 @@ class MatrixExpr(Arguments):
 
         super().append(expr)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "M[%s]" % (", ".join(repr(expr) for expr in self.contents))
