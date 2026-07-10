@@ -194,6 +194,32 @@ def test_math_functions():
     assert disp_of("Disp lcm(5,10)") == [10]
 
 
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        ("Disp 2⁻¹", 0.5),
+        ("Disp 5⁻¹", 0.2),
+        ("Disp 10⁻¹", 0.1),
+        ("Disp 4⁻¹", 0.25),
+    ],
+)
+def test_inverse_operator(expr, expected):
+    assert disp_of(expr)[0] == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        ("Disp 2×√4", 2),
+        ("Disp 3×√8", 2),
+        ("Disp 4×√16", 2),
+        ("Disp 2×√9", 3),
+    ],
+)
+def test_nth_root_operator(expr, expected):
+    assert disp_of(expr)[0] == pytest.approx(expected)
+
+
 def test_ans_holds_last_expression_result():
     vm = run("3+4\nDisp Ans")
     assert vm.io.disps == [7]

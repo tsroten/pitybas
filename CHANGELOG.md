@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Added the `⁻¹` postfix operator (multiplicative inverse): `n⁻¹` evaluates to `1/n`
+- Added the `×√` infix operator (general nth root): `n×√x` evaluates to the nth root of x
+
 ## 0.5.1 (2026-07-06)
 
 ### Fixed

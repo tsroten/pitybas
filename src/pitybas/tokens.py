@@ -657,7 +657,6 @@ class transpose(RightExponent):
         return out
 
 
-# TODO: -¹, ², ³, √(, ³√(, ×√
 class Square(RightExponent):
     token = "²"
 
@@ -670,6 +669,13 @@ class Cube(RightExponent):
 
     def op(self, left, right):
         return left**3
+
+
+class Inverse(RightExponent):
+    token = "⁻¹"
+
+    def op(self, left, right):
+        return left**-1
 
 
 class Sqrt(MathExprFunction):
@@ -700,6 +706,14 @@ class CubeRoot(MathExprFunction):
         else:
             # oh well
             return i
+
+
+class NthRoot(FloatOperator):
+    priority = Pri.EXPONENT
+    token = "×√"
+
+    def op(self, left, right):
+        return right ** (1.0 / left)
 
 
 class SciNot(Operator):
