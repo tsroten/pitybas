@@ -5,6 +5,22 @@
 ### Added
 - Added the `⁻¹` postfix operator (multiplicative inverse): `n⁻¹` evaluates to `1/n`
 - Added the `×√` infix operator (general nth root): `n×√x` evaluates to the nth root of x
+- Added graph screen support: a 95x63-pixel `GraphState` with window variables (`Xmin`/`Xmax`/`Xscl`/`Ymin`/`Ymax`/`Yscl`/`AxesOn`/`AxesOff`), point/pixel drawing (`Pt-On(`/`Pt-Off(`/`Pt-Change(`/`Pxl-On(`/`Pxl-Off(`/`Pxl-Change(`/`Pxl-Test(`/`ClrDraw`), geometric drawing (`Line(`, `Circle(`, `Horizontal`, `Vertical`), function/region plotting (`DrawF`, `Shade(`), text placement (`Text(`), and zoom presets (`ZStandard`, `ZDecimal`). The `vt100` IO backend (`pb -i vt100`) renders the graph screen live as a 48x16 grid of Unicode Braille characters and holds the screen at program exit if it was the most recently active screen, matching real TI-83/84 behavior; the `simple` backend and `ScriptedIO` track pixel state without rendering (see README "Known Limitations" — `Text(` doesn't render visibly under any backend yet)
+- Added `StorePic`/`RecallPic` and `StoreGDB`/`RecallGDB` to snapshot the pixel buffer and graph window variables to/from numbered slots (0-9)
+- Added `ScriptedIO`, a public `pitybas.io` backend for headlessly driving a program in tests and asserting on what it displayed/drew (replaces the test-only `MockIO`)
+- Added an `IOBase` abstract base class formalizing the IO backend contract shared by `simple`/`vt100`/`ScriptedIO`
+
+### Fixed
+- Fixed the `×√` operator returning floating-point noise for perfect roots (e.g. `3×√1000` now returns exactly `10`) and raising a Python complex-number error instead of `ERR:NONREAL ANS` for even roots of negative numbers
+- Fixed `StorePic`/`RecallPic`/`StoreGDB`/`RecallGDB` raising a bare `AssertionError` (silently disabled under `python -O`) instead of `ERR:DOMAIN` for out-of-range or non-integer slot numbers
+- Fixed a latent mutable-default-argument bug in `Repl.__init__` where multiple `Repl()` instances created without an explicit `code` argument would share the same underlying list
+- Fixed `Menu(`'s option lookup list not being reset between retry iterations: after one invalid choice, a 2-item menu's lookup held 4 entries, making an out-of-range choice like `3` silently valid and resolve to the wrong label
+- Fixed `Parser.close_brackets()` (implicitly closes unclosed parens at end of line/before `->`) re-appending an already-absorbed `FunctionArgs` object, duplicating nested unclosed function calls (e.g. `max(0,abs(R->R`) and raising a spurious "bad token order" error
+- Fixed `GraphState.to_pixel` raising `ZeroDivisionError` for a collapsed window (`Xmin`==`Xmax` or `Ymin`==`Ymax`); now returns `None` instead
+- Fixed `Circle(`'s pixel sampling under-sampling (visible gaps) when the window's Y scale yields a larger pixel radius than X, and potentially exploding its step count when `Xmax`-`Xmin` is tiny
+- Fixed `Pxl-On(`/`Pxl-Off(`/`Pxl-Change(`/`Pxl-Test(` crashing with `TypeError` on non-integer row/col arguments instead of rounding to the nearest pixel
+- Fixed the vt100 backend leaving the terminal cursor hidden on exit if a keypress wait for a held graph screen was interrupted (e.g. Ctrl-C)
+- Fixed the vt100 backend's exit-hold logic to track whichever screen (text or graph) was most recently active, rather than whether the graph buffer had anything drawn to it — matches verified real-hardware behavior where a later `Disp`/`Output(`/etc. switches back to the text screen and nothing holds
 
 ## 0.5.1 (2026-07-06)
 
