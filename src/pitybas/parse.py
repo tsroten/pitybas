@@ -330,7 +330,7 @@ class Parser:
             and isinstance(items[-2], tokens.MinuteSymbol)
         )
 
-    def symbol(self) -> Any:
+    def symbol(self) -> Optional[Any]:
         token = self.token(True)
         if token:
             return token
@@ -344,7 +344,7 @@ class Parser:
                 self.token()
                 return None
 
-    def token(self, sub: bool = False, inc: bool = True) -> Any:
+    def token(self, sub: bool = False, inc: bool = True) -> Optional[Any]:
         remaining = self.source[self.pos :]
         for token in self.TOKENS:
             if remaining.startswith(token):

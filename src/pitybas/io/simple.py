@@ -34,13 +34,13 @@ class IO(IOBase):
     def getkey(self) -> int:
         raise NotImplementedError
 
-    def output(self, x: int, y: int, msg: str) -> None:
+    def output(self, x: int, y: int, msg: object) -> None:
         print(msg)
 
-    def disp(self, msg: str = "") -> None:
+    def disp(self, msg: object = "") -> None:
         print(msg)
 
-    def pause(self, msg: str = "") -> None:
+    def pause(self, msg: object = "") -> None:
         if msg:
             self.disp(msg)
         self.input("[press enter]", True)

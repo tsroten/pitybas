@@ -352,7 +352,7 @@ class IO(IOBase):
         else:
             return 0
 
-    def output(self, row: int, col: int, msg: str) -> None:
+    def output(self, row: int, col: int, msg: object) -> None:
         self.vt.output(row, col, msg)
         self.vt.flush()
         self._last_screen = "text"
@@ -364,7 +364,7 @@ class IO(IOBase):
         self.vt.write(msg)
         self._last_screen = "text"
 
-    def pause(self, msg: str = "") -> None:
+    def pause(self, msg: object = "") -> None:
         if msg:
             self.disp(msg)
         self.input("[press enter]", True)

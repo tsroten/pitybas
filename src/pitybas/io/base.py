@@ -52,15 +52,15 @@ class IOBase(ABC):
         """Return the keycode of the key currently pressed, or 0."""
 
     @abstractmethod
-    def output(self, row: int, col: int, msg: str) -> None:
+    def output(self, row: int, col: int, msg: object) -> None:
         """Write *msg* at the given *row* and *col* on the display."""
 
     @abstractmethod
-    def disp(self, msg: str = "") -> None:
+    def disp(self, msg: object = "") -> None:
         """Display *msg* as a line of output."""
 
     @abstractmethod
-    def pause(self, msg: str = "") -> None:
+    def pause(self, msg: object = "") -> None:
         """Optionally display *msg*, then wait for the user to press Enter."""
 
     @abstractmethod

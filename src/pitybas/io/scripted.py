@@ -59,7 +59,7 @@ class ScriptedIO(IOBase):
         self.inputs: List[Any] = list(inputs or [])
         self.keys: List[int] = list(keys or [])
         self.disps: List[Any] = []
-        self.outputs: List[Tuple[int, int, str]] = []
+        self.outputs: List[Tuple[int, int, Any]] = []
         self.clears = 0
         self.draws: List[Tuple[int, int, bool]] = []
         self.clr_draws = 0
@@ -85,17 +85,17 @@ class ScriptedIO(IOBase):
             return self.keys.pop(0)
         return 0
 
-    def output(self, row: int, col: int, msg: str) -> None:
+    def output(self, row: int, col: int, msg: object) -> None:
         """Record a positioned write as a ``(row, col, msg)`` tuple."""
         self.outputs.append((row, col, msg))
 
-    def disp(self, msg: str = "") -> None:
+    def disp(self, msg: object = "") -> None:
         # lists/matrices are mutable and stored by reference in the vm;
         # snapshot them so later mutations don't retroactively change
         # already-recorded output.
         self.disps.append(copy.deepcopy(msg))
 
-    def pause(self, msg: str = "") -> None:
+    def pause(self, msg: object = "") -> None:
         if msg:
             self.disp(msg)
 
