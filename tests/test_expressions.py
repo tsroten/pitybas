@@ -214,10 +214,21 @@ def test_inverse_operator(expr, expected):
         ("Disp 3×√8", 2),
         ("Disp 4×√16", 2),
         ("Disp 2×√9", 3),
+        ("Disp 3×√1000", 10),
+        ("Disp 3×√1000000", 100),
+        ("Disp 3×√-8", -2),
+        ("Disp 3×√-27", -3),
     ],
 )
 def test_nth_root_operator(expr, expected):
     assert disp_of(expr)[0] == pytest.approx(expected)
+
+
+def test_nth_root_even_root_of_negative_raises():
+    from pitybas.common import ExecutionError
+
+    with pytest.raises(ExecutionError, match="ERR:NONREAL ANS"):
+        disp_of("Disp 4×√-16")
 
 
 def test_ans_holds_last_expression_result():
