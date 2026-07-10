@@ -657,7 +657,6 @@ class transpose(RightExponent):
         return out
 
 
-# TODO: -¹, ², ³, √(, ³√(, ×√
 class Square(RightExponent):
     token = "²"
 
@@ -670,6 +669,13 @@ class Cube(RightExponent):
 
     def op(self, left, right):
         return left**3
+
+
+class Inverse(RightExponent):
+    token = "⁻¹"
+
+    def op(self, left, right):
+        return left**-1
 
 
 class Sqrt(MathExprFunction):
@@ -700,6 +706,30 @@ class CubeRoot(MathExprFunction):
         else:
             # oh well
             return i
+
+
+class NthRoot(Operator):
+    priority = Pri.EXPONENT
+    token = "×√"
+
+    def op(self, left, right):
+        if right < 0 and left % 2 == 0:
+            raise ExecutionError("ERR:NONREAL ANS")
+
+        # Compute the real nth root, preserving the sign for odd roots of
+        # negative radicands (Python's ** would produce a complex number).
+        if right < 0:
+            i = -((-right) ** (1.0 / left))
+        else:
+            i = right ** (1.0 / left)
+
+        # Round to within our accuracy bounds, matching CubeRoot's approach,
+        # so that perfect roots (e.g. 3×√1000 = 10) are not returned as
+        # floating-point noise (9.999999999999998).
+        places = 14 - len(str(int(math.floor(abs(i)))))
+        if places > 0:
+            return round(i, places)
+        return i
 
 
 class SciNot(Operator):

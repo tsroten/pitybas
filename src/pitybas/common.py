@@ -1,8 +1,8 @@
 class Error(Exception):
-    def __init__(self, msg):
+    def __init__(self, msg: str) -> None:
         self.msg = msg
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.msg
 
 
@@ -52,5 +52,5 @@ class Pri:
     SET = 6
 
 
-def is_number(num):
+def is_number(num: object) -> bool:
     return str(num).lstrip("-").replace(".", "", 1).isdigit()
