@@ -1,6 +1,11 @@
 """Abstract base class for pitybas IO backends."""
 
 from abc import ABC, abstractmethod
+from types import TracebackType
+from typing import Any, Optional, Type, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pitybas.interpret import Interpreter
 
 
 class IOBase(ABC):
@@ -11,21 +16,26 @@ class IOBase(ABC):
     interpreter.  Subclasses must implement every abstract method.
     """
 
-    def __init__(self, vm):
+    def __init__(self, vm: "Interpreter") -> None:
         self.vm = vm
 
-    def __enter__(self):
+    def __enter__(self) -> "IOBase":
         return self
 
-    def __exit__(self, *args):
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         pass
 
     @abstractmethod
-    def clear(self):
+    def clear(self) -> None:
         """Clear the display."""
 
     @abstractmethod
-    def input(self, msg, is_str=False):
+    def input(self, msg: str, is_str: bool = False) -> Any:
         """Prompt the user for input and return the parsed value.
 
         Args:
@@ -38,23 +48,23 @@ class IOBase(ABC):
         """
 
     @abstractmethod
-    def getkey(self):
+    def getkey(self) -> int:
         """Return the keycode of the key currently pressed, or 0."""
 
     @abstractmethod
-    def output(self, row, col, msg):
+    def output(self, row: int, col: int, msg: str) -> None:
         """Write *msg* at the given *row* and *col* on the display."""
 
     @abstractmethod
-    def disp(self, msg=""):
+    def disp(self, msg: str = "") -> None:
         """Display *msg* as a line of output."""
 
     @abstractmethod
-    def pause(self, msg=""):
+    def pause(self, msg: str = "") -> None:
         """Optionally display *msg*, then wait for the user to press Enter."""
 
     @abstractmethod
-    def menu(self, menu):
+    def menu(self, menu: Any) -> Optional[str]:
         """Display an interactive menu and return the chosen label.
 
         Args:
@@ -67,7 +77,7 @@ class IOBase(ABC):
         """
 
     @abstractmethod
-    def draw_pixel(self, px, py, on):
+    def draw_pixel(self, px: int, py: int, on: bool) -> None:
         """Render a single graph-screen pixel changing state.
 
         Args:
@@ -77,11 +87,11 @@ class IOBase(ABC):
         """
 
     @abstractmethod
-    def clr_draw(self):
+    def clr_draw(self) -> None:
         """Render the graph screen's drawn points/lines being cleared."""
 
     @abstractmethod
-    def draw_line(self, x1, y1, x2, y2, on):
+    def draw_line(self, x1: float, y1: float, x2: float, y2: float, on: bool) -> None:
         """Render a Line(/Horizontal/Vertical draw in window coordinates.
 
         Args:
@@ -91,7 +101,7 @@ class IOBase(ABC):
         """
 
     @abstractmethod
-    def draw_circle(self, x, y, r, on):
+    def draw_circle(self, x: float, y: float, r: float, on: bool) -> None:
         """Render a Circle( draw in window coordinates.
 
         Args:
@@ -101,7 +111,7 @@ class IOBase(ABC):
         """
 
     @abstractmethod
-    def pxl_on(self, row, col):
+    def pxl_on(self, row: int, col: int) -> None:
         """Render a Pxl-On( turning the pixel at (row, col) on.
 
         Args:
@@ -110,7 +120,7 @@ class IOBase(ABC):
         """
 
     @abstractmethod
-    def pxl_off(self, row, col):
+    def pxl_off(self, row: int, col: int) -> None:
         """Render a Pxl-Off( turning the pixel at (row, col) off.
 
         Args:
@@ -119,7 +129,7 @@ class IOBase(ABC):
         """
 
     @abstractmethod
-    def pxl_change(self, row, col, on):
+    def pxl_change(self, row: int, col: int, on: bool) -> None:
         """Render a Pxl-Change( toggling the pixel at (row, col).
 
         Args:
@@ -129,15 +139,15 @@ class IOBase(ABC):
         """
 
     @abstractmethod
-    def draw_function(self):
+    def draw_function(self) -> None:
         """Render a DrawF plot of the graph screen's pixel buffer."""
 
     @abstractmethod
-    def draw_shade(self):
+    def draw_shade(self) -> None:
         """Render a Shade( fill of the graph screen's pixel buffer."""
 
     @abstractmethod
-    def draw_text_graph(self, row, col, msg):
+    def draw_text_graph(self, row: int, col: int, msg: str) -> None:
         """Render a Text( string at raw pixel (row, col) on the graph screen.
 
         Args:

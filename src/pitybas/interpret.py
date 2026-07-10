@@ -4,30 +4,39 @@ import decimal
 import os
 import time
 import traceback
+from typing import Any, Iterator, List, Optional, Tuple, Type
 
 from .parse import Parser, ParseError
 from .tokens import EOF, Value, REPL
 from .common import ExecutionError, StopError, ReturnError
 from .graph import GraphState
 
+from pitybas.io.base import IOBase
 from pitybas.io.simple import IO
 from .expression import Base
 
 
 class Interpreter(object):
     @classmethod
-    def from_string(cls, string, *args, **kwargs):
+    def from_string(cls, string: str, *args: Any, **kwargs: Any) -> "Interpreter":
         code = Parser(string).parse()
         return Interpreter(code, *args, **kwargs)
 
     @classmethod
-    def from_file(cls, filename, *args, **kwargs):
+    def from_file(cls, filename: str, *args: Any, **kwargs: Any) -> "Interpreter":
         string = open(filename, "r", encoding="utf8").read()
         vm = Interpreter.from_string(string, *args, **kwargs)
         vm.name = os.path.basename(filename)
         return vm
 
-    def __init__(self, code, history=10, io=None, name=None, strict=False):
+    def __init__(
+        self,
+        code: List[List[Any]],
+        history: int = 10,
+        io: Optional[Type[IOBase]] = None,
+        name: Optional[str] = None,
+        strict: bool = False,
+    ) -> None:
         if not io:
             io = IO
         self.io = io(self)
@@ -38,15 +47,15 @@ class Interpreter(object):
         self.line = 0
         self.col = 0
         self.expression = None
-        self.blocks = []
-        self.running = []
-        self.history = []
+        self.blocks: List[Any] = []
+        self.running: List[Tuple[int, int, Any]] = []
+        self.history: List[Tuple[int, int, Any]] = []
         self.hist_len = history
         self.strict = strict
 
-        self.vars = {}
-        self.lists = defaultdict(list)
-        self.matrix = {}
+        self.vars: dict = {}
+        self.lists: defaultdict = defaultdict(list)
+        self.matrix: dict = {}
         self.fixed = -1
         self.degree_mode = False
         self.graph = GraphState()
@@ -58,13 +67,13 @@ class Interpreter(object):
         self.date_fmt = 1
         self.time_fmt = 12
 
-        self.serial = 0
+        self.serial: float = 0
         self.repl_serial = 0
 
-    def cur(self):
+    def cur(self) -> Any:
         return self.code[self.line][self.col]
 
-    def inc(self):
+    def inc(self) -> Any:
         self.col += 1
         if self.col >= len(self.code[self.line]):
             self.col = 0
@@ -72,12 +81,12 @@ class Interpreter(object):
 
         return self.cur()
 
-    def inc_row(self):
+    def inc_row(self) -> Any:
         self.line = min(self.line + 1, len(self.code) - 1)
         self.expression = None
         return self.cur()
 
-    def get_var(self, var, default=None):
+    def get_var(self, var: str, default: Any = None) -> Any:
         if var not in self.vars:
             if self.strict:
                 raise ExecutionError("ERR:UNDEFINED")
@@ -85,26 +94,26 @@ class Interpreter(object):
                 return default
         return self.vars[var]
 
-    def set_var(self, var, value):
+    def set_var(self, var: str, value: Any) -> Any:
         if isinstance(value, (Value, Base)):
             value = value.get(self)
 
         self.vars[var] = value
         return value
 
-    def get_matrix(self, name):
+    def get_matrix(self, name: str) -> Any:
         return self.matrix[name]
 
-    def set_matrix(self, name, value):
+    def set_matrix(self, name: str, value: Any) -> None:
         self.matrix[name] = value
 
-    def get_list(self, name):
+    def get_list(self, name: str) -> Any:
         return self.lists[name]
 
-    def set_list(self, name, value):
+    def set_list(self, name: str, value: Any) -> None:
         self.lists[name] = value
 
-    def push_block(self, block=None):
+    def push_block(self, block: Any = None) -> None:
         if not block and self.running:
             block = self.running[-1]
 
@@ -113,13 +122,13 @@ class Interpreter(object):
         else:
             raise ExecutionError("tried to push an invalid block to the stack")
 
-    def pop_block(self):
+    def pop_block(self) -> Any:
         if self.blocks:
             return self.blocks.pop()
         else:
             raise ExecutionError("tried to pop an empty block stack")
 
-    def find(self, *types, **kwargs):
+    def find(self, *types: type, **kwargs: Any) -> Iterator[Tuple[int, int, Any]]:
         if "wrap" in kwargs:
             wrap = kwargs["wrap"]
         else:
@@ -130,12 +139,13 @@ class Interpreter(object):
         else:
             pos = self.line
 
-        def y(i):
+        def y(i: int) -> Optional[Tuple[int, int, Any]]:
             line = self.code[i]
             if line:
                 cur = line[0]
                 if isinstance(cur, types):
                     return i, 0, cur
+            return None
 
         for i in range(pos, len(self.code)):
             ret = y(i)
@@ -148,14 +158,14 @@ class Interpreter(object):
                 if ret:
                     yield ret
 
-    def goto(self, row, col):
+    def goto(self, row: int, col: int) -> None:
         if row >= 0 and row < len(self.code) and col >= 0 and col < len(self.code[row]):
             self.line = row
             self.col = col
         else:
             raise ExecutionError("cannot goto (%i, %i)" % (row, col))
 
-    def get(self, *var):
+    def get(self, *var: Any) -> Any:
         ret = []
         for v in var:
             val = v.get(self)
@@ -176,16 +186,17 @@ class Interpreter(object):
 
         return ret
 
-    def disp_round(self, num):
+    def disp_round(self, num: Any) -> Any:
         if not isinstance(num, (decimal.Decimal, int, float, complex)):
             return num
 
         if self.fixed < 0:
             return num
         else:
-            return round(num, self.fixed)
+            # round() rejects complex; pre-existing behavior, not addressed here.
+            return round(num, self.fixed)  # type: ignore[arg-type]
 
-    def run(self, cur):
+    def run(self, cur: Any) -> None:
         self.history.append((self.line, self.col, cur))
         self.history = self.history[-self.hist_len :]
 
@@ -203,7 +214,7 @@ class Interpreter(object):
         else:
             raise ExecutionError("cannot seem to run token: %s" % cur)
 
-    def execute(self):
+    def execute(self) -> None:
         with self.io:
             try:
                 while not isinstance(self.cur(), EOF):
@@ -218,11 +229,16 @@ class Interpreter(object):
                     print()
                     print("Returned:", e.args[0])
 
-    def print_tokens(self):
+    def print_tokens(self) -> None:
         for line in self.code:
             print((", ".join(repr(n) for n in line)).replace("u'", "'"))
 
-    def print_ast(self, start=0, end=None, highlight=None):
+    def print_ast(
+        self,
+        start: int = 0,
+        end: Optional[int] = None,
+        highlight: Optional[int] = None,
+    ) -> None:
         if end is None:
             end = len(self.code)
 
@@ -233,7 +249,9 @@ class Interpreter(object):
             else:
                 print("{:3}: {}".format(i, line))
 
-    def print_stacktrace(self, num=None, vardump=False):
+    def print_stacktrace(
+        self, num: Optional[int] = None, vardump: bool = False
+    ) -> None:
         if not num:
             num = self.hist_len
 
@@ -266,7 +284,7 @@ class Interpreter(object):
             pprint.pprint(self.vars)
             print()
 
-    def run_prgm(self, name):
+    def run_prgm(self, name: str) -> None:
         for ref in os.listdir("."):
             if ref.endswith(".bas"):
                 test = ref.rsplit(".", 1)[0]
@@ -278,11 +296,11 @@ class Interpreter(object):
 
 
 class Repl(Interpreter):
-    def __init__(self, code=[], **kwargs):
-        super(Repl, self).__init__(code, **kwargs)
+    def __init__(self, code: Optional[List[List[Any]]] = None, **kwargs: Any) -> None:
+        super(Repl, self).__init__(code if code is not None else [], **kwargs)
         self.code.insert(-2, [REPL()])
 
-    def execute(self):
+    def execute(self) -> None:
         while not isinstance(self.cur(), EOF):
             try:
                 super(Repl, self).execute()

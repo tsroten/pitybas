@@ -3,16 +3,18 @@ try:
 except ImportError:
     pass
 
+from typing import Any, Optional
+
 from pitybas.parse import Parser
 from pitybas.common import ParseError
 from pitybas.io.base import IOBase
 
 
 class IO(IOBase):
-    def clear(self):
+    def clear(self) -> None:
         print("-" * 16)
 
-    def input(self, msg, is_str=False):
+    def input(self, msg: str, is_str: bool = False) -> Any:
         while True:
             try:
                 if msg:
@@ -29,21 +31,21 @@ class IO(IOBase):
                 print("ERR:DATA")
                 print()
 
-    def getkey(self):
+    def getkey(self) -> int:
         raise NotImplementedError
 
-    def output(self, x, y, msg):
+    def output(self, x: int, y: int, msg: str) -> None:
         print(msg)
 
-    def disp(self, msg=""):
+    def disp(self, msg: str = "") -> None:
         print(msg)
 
-    def pause(self, msg=""):
+    def pause(self, msg: str = "") -> None:
         if msg:
             self.disp(msg)
         self.input("[press enter]", True)
 
-    def menu(self, menu):
+    def menu(self, menu: Any) -> Optional[str]:
         # menu is a tuple of (title, [(desc, label)]) -- title/desc are
         # already-evaluated display strings; label is a raw, unevaluated
         # token for Goto to resolve.
@@ -66,32 +68,32 @@ class IO(IOBase):
             else:
                 print("invalid choice")
 
-    def draw_pixel(self, px, py, on):
+    def draw_pixel(self, px: int, py: int, on: bool) -> None:
         pass
 
-    def clr_draw(self):
+    def clr_draw(self) -> None:
         pass
 
-    def draw_line(self, x1, y1, x2, y2, on):
+    def draw_line(self, x1: float, y1: float, x2: float, y2: float, on: bool) -> None:
         pass
 
-    def draw_circle(self, x, y, r, on):
+    def draw_circle(self, x: float, y: float, r: float, on: bool) -> None:
         pass
 
-    def pxl_on(self, row, col):
+    def pxl_on(self, row: int, col: int) -> None:
         pass
 
-    def pxl_off(self, row, col):
+    def pxl_off(self, row: int, col: int) -> None:
         pass
 
-    def pxl_change(self, row, col, on):
+    def pxl_change(self, row: int, col: int, on: bool) -> None:
         pass
 
-    def draw_function(self):
+    def draw_function(self) -> None:
         pass
 
-    def draw_shade(self):
+    def draw_shade(self) -> None:
         pass
 
-    def draw_text_graph(self, row, col, msg):
+    def draw_text_graph(self, row: int, col: int, msg: str) -> None:
         pass

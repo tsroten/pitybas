@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from typing import Any, Iterator, List, Optional, Union
+
 from . import tokens
 from .common import ParseError, is_number
 from .expression import (
@@ -36,19 +38,19 @@ class Parser:
         if t[0] not in SYMBOLS and not t.isalpha():
             SYMBOLS.append(t[0])
 
-    def __init__(self, source):
+    def __init__(self, source: str) -> None:
         self.source = str(source)
-        self.length = len(source)
+        self.length = len(self.source)
         self.pos = 0
         self.line = 0
-        self.lines = []
+        self.lines: List[List[Any]] = []
 
-        self.stack = []
+        self.stack: List[Any] = []
 
     @staticmethod
-    def parse_line(vm, line):
+    def parse_line(vm: Any, line: str) -> Any:
         if not line:
-            return
+            return None
 
         parser = Parser(line)
         parser.TOKENS = parser.VARIABLES + parser.FUNCTIONS + parser.OPERATORS
@@ -60,24 +62,24 @@ class Parser:
 
         return vm.get(parser.parse()[0][0])
 
-    def clean(self):
+    def clean(self) -> None:
         self.source = self.source.replace("\r\n", "\n").replace("\r", "\n")
 
-    def error(self, msg):
+    def error(self, msg: str) -> None:
         raise ParseError(msg)
 
-    def inc(self, n=1):
+    def inc(self, n: int = 1) -> None:
         self.pos += n
 
-    def more(self, pos=None):
+    def more(self, pos: Optional[int] = None) -> bool:
         if pos is None:
             pos = self.pos
         return pos < self.length
 
-    def post(self):
+    def post(self) -> Iterator[List[Any]]:
         for line in self.lines:
             if line:
-                new = []
+                new: List[Any] = []
                 expr = None
                 for token in line:
                     if token.priority > tokens.Pri.INVALID:
@@ -127,10 +129,10 @@ class Parser:
 
                 yield new
 
-    def parse(self):
+    def parse(self) -> List[List[Any]]:
         while self.more():
             char = self.source[self.pos]
-            result = None
+            result: Any = None
             if self.lines and self.lines[-1]:
                 token = self.lines[-1][-1]
             else:
@@ -155,7 +157,7 @@ class Parser:
                 continue
             elif char in "([{":
                 if char == "(":
-                    cls = ParenExpr
+                    cls: type = ParenExpr
                 elif char == "[":
                     if self.more(self.pos + 1) and self.source[self.pos + 1].isalpha():
                         result = self.matrix()
@@ -170,7 +172,7 @@ class Parser:
                     continue
             elif char in ")]}":
                 if self.stack:
-                    stacks = []
+                    stacks: List[Any] = []
                     l = len(self.stack)
                     for i in range(l):
                         stack = self.stack.pop(l - i - 1)
@@ -290,7 +292,7 @@ class Parser:
         self.close_brackets()
         return [line for line in self.post()]
 
-    def add(self, token):
+    def add(self, token: Any) -> None:
         # TODO: cannot add Pri.INVALID unless there's no expr on the stack
         if isinstance(token, FunctionArgs):
             # already linked to its owning Function/List/Matrix via the
@@ -309,11 +311,12 @@ class Parser:
 
             self.lines[self.line].append(token)
 
-    def close_brackets(self):
+    def close_brackets(self) -> None:
         while self.stack:
             self.add(self.stack.pop())
 
-    def dms_seconds_pending(self):
+    def dms_seconds_pending(self) -> bool:
+        items: Optional[List[Any]]
         if self.stack:
             items = getattr(self.stack[-1], "contents", None)
         elif self.lines and self.line < len(self.lines):
@@ -322,12 +325,12 @@ class Parser:
             items = None
 
         return (
-            bool(items)
+            items is not None
             and len(items) >= 2
             and isinstance(items[-2], tokens.MinuteSymbol)
         )
 
-    def symbol(self):
+    def symbol(self) -> Any:
         token = self.token(True)
         if token:
             return token
@@ -339,8 +342,9 @@ class Parser:
             else:
                 # a second time to throw the error
                 self.token()
+                return None
 
-    def token(self, sub=False, inc=True):
+    def token(self, sub: bool = False, inc: bool = True) -> Any:
         remaining = self.source[self.pos :]
         for token in self.TOKENS:
             if remaining.startswith(token):
@@ -353,8 +357,11 @@ class Parser:
                 self.error(
                     'no token found at pos %i near "%s"' % (self.pos, repr(near))
                 )
+            return None
 
-    def number(self, dot=True, test=False, inc=True):
+    def number(
+        self, dot: bool = True, test: bool = False, inc: bool = True
+    ) -> Union[bool, int, float]:
         num = ""
         first = True
         pos = self.pos
@@ -387,6 +394,7 @@ class Parser:
         if is_number(num):
             if test:
                 return True
+            n: Union[int, float]
             try:
                 n = int(num)
             except ValueError:
@@ -403,7 +411,7 @@ class Parser:
                 "invalid number ending at {}:{}: {}".format(line, col, num)
             )
 
-    def string(self):
+    def string(self) -> str:
         ret = ""
         self.inc()
 
@@ -421,7 +429,7 @@ class Parser:
 
         return ret
 
-    def all(self, match="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"):
+    def all(self, match: str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") -> str:
         ret = ""
         while self.more():
             char = self.source[self.pos]
@@ -433,7 +441,7 @@ class Parser:
 
         return ret
 
-    def list(self):
+    def list(self) -> Any:
         self.inc()
         name = self.all(
             match="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" + _SUBSCRIPT_DIGITS
@@ -441,7 +449,7 @@ class Parser:
         name = name.translate(_SUBSCRIPT_TRANS)
         return tokens.List(name)
 
-    def matrix(self):
+    def matrix(self) -> Any:
         self.inc()
         name = self.all()
 

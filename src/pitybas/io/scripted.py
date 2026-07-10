@@ -1,9 +1,13 @@
 """Scripted IO backend for driving programs in tests."""
 
 import copy
+from typing import Any, List, Optional, Tuple, TYPE_CHECKING
 
 from pitybas.io.base import IOBase
 from pitybas.parse import Parser
+
+if TYPE_CHECKING:
+    from pitybas.interpret import Interpreter
 
 
 class ScriptedIO(IOBase):
@@ -45,52 +49,57 @@ class ScriptedIO(IOBase):
         assert vm.io.disps == [42]
     """
 
-    def __init__(self, vm, inputs=None, keys=None):
+    def __init__(
+        self,
+        vm: "Interpreter",
+        inputs: Optional[List[Any]] = None,
+        keys: Optional[List[int]] = None,
+    ) -> None:
         self.vm = vm
-        self.inputs = list(inputs or [])
-        self.keys = list(keys or [])
-        self.disps = []
-        self.outputs = []
+        self.inputs: List[Any] = list(inputs or [])
+        self.keys: List[int] = list(keys or [])
+        self.disps: List[Any] = []
+        self.outputs: List[Tuple[int, int, str]] = []
         self.clears = 0
-        self.draws = []
+        self.draws: List[Tuple[int, int, bool]] = []
         self.clr_draws = 0
-        self.lines = []
-        self.circles = []
-        self.pxls = []
+        self.lines: List[Tuple[float, float, float, float, bool]] = []
+        self.circles: List[Tuple[float, float, float, bool]] = []
+        self.pxls: List[Tuple[int, int, bool]] = []
         self.draw_fs = 0
         self.shades = 0
-        self.texts = []
+        self.texts: List[Tuple[int, int, str]] = []
 
-    def clear(self):
+    def clear(self) -> None:
         self.clears += 1
 
-    def input(self, msg, is_str=False):
+    def input(self, msg: str, is_str: bool = False) -> Any:
         val = self.inputs.pop(0)
         if not is_str and isinstance(val, str):
             val = Parser.parse_line(self.vm, val)
         return val
 
-    def getkey(self):
+    def getkey(self) -> int:
         """Return the next key from *keys*, or ``0`` when the list is empty."""
         if self.keys:
             return self.keys.pop(0)
         return 0
 
-    def output(self, row, col, msg):
+    def output(self, row: int, col: int, msg: str) -> None:
         """Record a positioned write as a ``(row, col, msg)`` tuple."""
         self.outputs.append((row, col, msg))
 
-    def disp(self, msg=""):
+    def disp(self, msg: str = "") -> None:
         # lists/matrices are mutable and stored by reference in the vm;
         # snapshot them so later mutations don't retroactively change
         # already-recorded output.
         self.disps.append(copy.deepcopy(msg))
 
-    def pause(self, msg=""):
+    def pause(self, msg: str = "") -> None:
         if msg:
             self.disp(msg)
 
-    def menu(self, menu):
+    def menu(self, menu: Any) -> Optional[str]:
         """Select a menu option by 1-based index drawn from *inputs*.
 
         The next value popped from :attr:`inputs` is treated as a 1-based
@@ -101,42 +110,42 @@ class ScriptedIO(IOBase):
         lookup = [label for _, entries in menu for _, label in entries]
         return lookup[int(choice) - 1]
 
-    def draw_pixel(self, px, py, on):
+    def draw_pixel(self, px: int, py: int, on: bool) -> None:
         """Record a graph-screen pixel change as a ``(px, py, on)`` tuple."""
         self.draws.append((px, py, on))
 
-    def clr_draw(self):
+    def clr_draw(self) -> None:
         """Record a graph-screen clear."""
         self.clr_draws += 1
 
-    def draw_line(self, x1, y1, x2, y2, on):
+    def draw_line(self, x1: float, y1: float, x2: float, y2: float, on: bool) -> None:
         """Record a Line(/Horizontal/Vertical draw as a tuple."""
         self.lines.append((x1, y1, x2, y2, on))
 
-    def draw_circle(self, x, y, r, on):
+    def draw_circle(self, x: float, y: float, r: float, on: bool) -> None:
         """Record a Circle( draw as a tuple."""
         self.circles.append((x, y, r, on))
 
-    def pxl_on(self, row, col):
+    def pxl_on(self, row: int, col: int) -> None:
         """Record a Pxl-On( as a ``(row, col, True)`` tuple."""
         self.pxls.append((row, col, True))
 
-    def pxl_off(self, row, col):
+    def pxl_off(self, row: int, col: int) -> None:
         """Record a Pxl-Off( as a ``(row, col, False)`` tuple."""
         self.pxls.append((row, col, False))
 
-    def pxl_change(self, row, col, on):
+    def pxl_change(self, row: int, col: int, on: bool) -> None:
         """Record a Pxl-Change( as a ``(row, col, on)`` tuple."""
         self.pxls.append((row, col, on))
 
-    def draw_function(self):
+    def draw_function(self) -> None:
         """Record a DrawF plot."""
         self.draw_fs += 1
 
-    def draw_shade(self):
+    def draw_shade(self) -> None:
         """Record a Shade( fill."""
         self.shades += 1
 
-    def draw_text_graph(self, row, col, msg):
+    def draw_text_graph(self, row: int, col: int, msg: str) -> None:
         """Record a Text( call as a ``(row, col, msg)`` tuple."""
         self.texts.append((row, col, msg))
