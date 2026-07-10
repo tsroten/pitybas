@@ -85,7 +85,9 @@ spelling isn't a valid Python identifier. `Function` subclasses get `(` appended
 key automatically. Nearly all tokens live in `src/pitybas/tokens.py` (2300+ lines — grep
 for a similar existing token rather than reading it top to bottom). `TODO.md` lists known
 missing tokens/features and *why* they're hard. Don't forget the CHANGELOG entry (see
-above).
+above). `docs/ti-reference.md` has curated notes from the official TI-84 Plus guidebook
+(window vars, Y=/DRAW/GDB, Lists, Matrices, Strings) if you need to confirm real-hardware
+behavior for a specific command — not required reading otherwise.
 
 ## Dev workflow
 
