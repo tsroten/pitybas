@@ -1205,6 +1205,11 @@ class inString(Function):
         # TI's start arg is 1-based; str.find is 0-based (default 0 == start 1).
         skip = 0
         if len(args) == 3:
+            # Real hardware requires start >= 1; a value below that is ERR:DOMAIN
+            # (and would otherwise become a negative str.find offset, searching
+            # from the end of the string).
+            if args[2] < 1:
+                raise ExecutionError("ERR:DOMAIN")
             skip = args[2] - 1
         pos = haystack.find(needle, skip)
         # TI returns a 1-based position, or 0 when not found (str.find gives -1).

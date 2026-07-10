@@ -14,7 +14,7 @@
 - Bumped supported Python versions to 3.11–3.14 (`requires-python = ">=3.11"`), updated Trove classifiers, updated mypy target to 3.11, and updated GitHub Actions test matrix and build/lint/publish jobs to target 3.11–3.14
 
 ### Fixed
-- Fixed `inString(` using Python's 0-based indexing and `-1` not-found sentinel instead of TI's 1-based semantics: a match now returns a 1-based character position (e.g. `inString("PQRSTUV","STU")` returns `4`), the optional `start` argument is interpreted as a 1-based position, and a missing substring (or a `start` past the end of the string) returns `0` rather than `-1`
+- Fixed `inString(` using Python's 0-based indexing and `-1` not-found sentinel instead of TI's 1-based semantics: a match now returns a 1-based character position (e.g. `inString("PQRSTUV","STU")` returns `4`), the optional `start` argument is interpreted as a 1-based position, a missing substring (or a `start` past the end of the string) returns `0` rather than `-1`, and a `start` below `1` now raises `ERR:DOMAIN` instead of being passed through as a negative (search-from-end) offset
 - Fixed the `×√` operator returning floating-point noise for perfect roots (e.g. `3×√1000` now returns exactly `10`) and raising a Python complex-number error instead of `ERR:NONREAL ANS` for even roots of negative numbers
 - Fixed `StorePic`/`RecallPic`/`StoreGDB`/`RecallGDB` raising a bare `AssertionError` (silently disabled under `python -O`) instead of `ERR:DOMAIN` for out-of-range or non-integer slot numbers
 - Fixed a latent mutable-default-argument bug in `Repl.__init__` where multiple `Repl()` instances created without an explicit `code` argument would share the same underlying list

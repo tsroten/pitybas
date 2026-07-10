@@ -1,6 +1,7 @@
 import pytest
 
 from conftest import run
+from pitybas.common import ExecutionError
 
 
 def disp_of(source):
@@ -24,3 +25,17 @@ def disp_of(source):
 )
 def test_instring(expr, expected):
     assert disp_of(expr) == expected
+
+
+@pytest.mark.parametrize(
+    "expr",
+    [
+        # start below 1 is invalid on real hardware (ERR:DOMAIN), and must not
+        # be passed through to str.find as a negative (search-from-end) offset.
+        'Disp inString("ABCABC","ABC",0)',
+        'Disp inString("ABCABC","ABC",-1)',
+    ],
+)
+def test_instring_start_below_one_is_domain_error(expr):
+    with pytest.raises(ExecutionError, match="ERR:DOMAIN"):
+        disp_of(expr)
