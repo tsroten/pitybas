@@ -67,15 +67,10 @@ files = ["src/pitybas"]
 warn_unused_ignores = true
 warn_redundant_casts = true
 
-# The token/expression/interpreter core is a metaclass-based token registry
-# with duck-typed AST nodes (class-level attributes like `arg`/`absorbs`/`end`
-# are deliberately overridden with different types in subclasses). Leave it
-# unchecked for now rather than blocking CI; tighten module-by-module as
-# each one gets annotated (see THO-23).
+# `pitybas.tokens` remains untyped for now because the dynamic token registry
+# and many generated token classes still need gradual annotation.
 [[tool.mypy.overrides]]
 module = [
     "pitybas.tokens",
-    "pitybas.token_core",
-    "pitybas.expression",
 ]
 ignore_errors = true

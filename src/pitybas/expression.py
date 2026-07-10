@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any
+
 from . import tokens
 from .common import ExpressionError, Pri, is_number
 
@@ -12,17 +16,17 @@ class Base:
     can_fill_right = False
     absorbs = ()
 
-    end = None
+    end: str | None = None
 
-    def __init__(self, *elements):
-        self.contents = []
-        self.raw = []
+    def __init__(self, *elements: Any):
+        self.contents: list[Any] = []
+        self.raw: list[Any] = []
         self.finished = False
 
         for e in elements:
             self.append(e)
 
-    def append(self, token):
+    def append(self, token: Any) -> None:
         if self.contents:
             prev = self.contents[-1]
 
@@ -55,6 +59,7 @@ class Base:
                 if (
                     isinstance(token, tokens.Value)
                     and is_number(token.value)
+                    and token.value is not None
                     and int(token.value) < 0
                 ):
                     self.contents.append(tokens.Plus())
@@ -64,11 +69,11 @@ class Base:
         self.raw.append(token)
         self.contents.append(token)
 
-    def extend(self, array):
+    def extend(self, array: list[Any]) -> None:
         for x in array:
             self.append(x)
 
-    def flatten(self):
+    def flatten(self) -> Any:
         if len(self.contents) == 1:
             first = self.contents[0]
             if isinstance(first, Base):
@@ -78,7 +83,7 @@ class Base:
 
         return self
 
-    def fill(self):
+    def fill(self) -> None:
         # TODO: instead of this system, perhaps tokens should be able to specify
         # whether they need/want left/right params
         if not self.contents:
@@ -123,7 +128,7 @@ class Base:
 
         self.contents = new
 
-    def validate(self):
+    def validate(self) -> None:
         if not self.contents:
             return
 
@@ -153,12 +158,12 @@ class Base:
                     % self
                 )
 
-    def order(self):
-        # this step returns a list of ordered indicies
+    def order(self) -> list[int]:
+        # this step returns a list of ordered indices
         # to help reduce tokens to a single value
         # see common.Pri for an ordering explanation
 
-        order = {}
+        order: dict[int, list[int]] = {}
 
         for i in range(len(self.contents)):
             token = self.contents[i]
@@ -176,11 +181,11 @@ class Base:
 
         return ret
 
-    def get(self, vm):
+    def get(self, vm: Any) -> Any:
         self.fill()
         self.validate()
 
-        sub = []
+        sub: list[int] = []
         expr = self.contents[:]
         for i in self.order():
             n = 0
@@ -199,26 +204,27 @@ class Base:
 
         return vm.get(expr[0])
 
-    def finish(self):
+    def finish(self) -> None:
         self.finished = True
 
-    def close(self, char):
+    def close(self, char: str) -> bool:
         for stack in reversed(self.contents):
-            if isinstance(stack, Base):
-                if stack.close(char):
-                    return False
+            if isinstance(stack, Base) and stack.close(char):
+                return False
 
-        if char == self.end and not self.finished:
-            self.finish()
-            return True
+        if char != self.end or self.finished:
+            return False
 
-    def __str__(self):
+        self.finish()
+        return True
+
+    def __str__(self) -> str:
         return "".join([a.token for a in self.raw])
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.contents)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "E(%s)" % (" ".join(repr(token) for token in self.contents))
 
 
@@ -226,17 +232,17 @@ bracket_map = {"(": ")", "{": "}", "[": "]"}
 
 
 class Expression(Base):
-    def set(self, vm, value):
+    def set(self, vm: Any, value: Any) -> None:
         if len(self.contents) == 1:
             self.contents[0].set(vm, value)
 
 
 class Bracketed(Base):
-    def __init__(self, end):
+    def __init__(self, end: str):
         self.end = bracket_map[end]
         Base.__init__(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "B(%s)" % (" ".join(repr(token) for token in self.contents))
 
 
@@ -250,7 +256,7 @@ class Tuple(Base):
     def __init__(self):
         Base.__init__(self)
 
-    def append(self, expr):
+    def append(self, expr: Any) -> None:
         if isinstance(expr, Base):
             expr = expr.flatten()
 
@@ -263,18 +269,18 @@ class Tuple(Base):
         expr = Expression(expr)
         self.contents.append(expr)
 
-    def sep(self):
+    def sep(self) -> None:
         if self.contents:
             self.contents[-1].finish()
 
-    def get(self, vm):
+    def get(self, vm: Any) -> list[Any]:
         return [vm.get(arg) for arg in self.contents]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.contents)
 
-    def __repr__(self):
-        def expr_repr(e):
+    def __repr__(self) -> str:
+        def expr_repr(e: Any) -> str:
             if not isinstance(e, Expression):
                 return "({})".format(e)
             else:
@@ -284,10 +290,10 @@ class Tuple(Base):
 
 
 class Arguments(Tuple, Bracketed):
-    def __init__(self, end):
+    def __init__(self, end: str):
         Bracketed.__init__(self, end)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "A(%s)" % (", ".join(repr(expr) for expr in self.contents))
 
 
@@ -299,7 +305,7 @@ class ListExpr(Arguments):
     priority = Pri.NONE
     end = "}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "L{%s}" % (", ".join(repr(expr) for expr in self.contents))
 
 
@@ -307,7 +313,7 @@ class MatrixExpr(Arguments):
     priority = Pri.NONE
     end = "]"
 
-    def append(self, expr):
+    def append(self, expr: Any) -> None:
         # Real hardware writes adjacent matrix literal rows with no
         # separator, e.g. "[[1,2][3,4]]" -- each row parses as its own
         # MatrixExpr. Without this, the inherited Tuple.append() would
@@ -320,5 +326,5 @@ class MatrixExpr(Arguments):
 
         super().append(expr)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "M[%s]" % (", ".join(repr(expr) for expr in self.contents))
