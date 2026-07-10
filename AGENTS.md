@@ -100,8 +100,9 @@ ruff format src/ tests/
 mypy                            # only checks src/pitybas, not tests/
 ```
 
-CI (`.github/workflows/tests.yml`) runs pytest across Python 3.9–3.12 — don't rely on
-3.13+-only stdlib behavior in `src/`.
+CI (`.github/workflows/tests.yml`) runs pytest across Python 3.11–3.14 — don't rely on
+3.15+-only stdlib behavior in `src/`, but 3.10-and-earlier-only constructs no longer need
+to be avoided.
 
 ## Release process
 
