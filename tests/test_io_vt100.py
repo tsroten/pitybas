@@ -654,6 +654,20 @@ def test_input_clears_graph_when_switching_from_graph_to_text(
     assert "\033[2J" in out
 
 
+def test_output_clears_graph_when_switching_from_graph_to_text(io_obj, capsys):
+    # Switching from graph to text via output() must clear the graph first so
+    # the two screens are never visible at the same time.
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_pixel(0, 0, True)
+    capsys.readouterr()  # discard graph output
+
+    io_obj.output(1, 1, "hi")
+    out = capsys.readouterr().out
+    # A clear (\033[2J) must appear before the message is written.
+    assert "\033[2J" in out
+    assert out.index("\033[2J") < out.index("hi")
+
+
 # ── IO: clear ────────────────────────────────────────────────────────────────
 
 

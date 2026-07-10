@@ -358,6 +358,8 @@ class IO(IOBase):
             return 0
 
     def output(self, row: int, col: int, msg: object) -> None:
+        if self._last_screen == "graph":
+            self.vt.flush()
         self.vt.output(row, col, msg)
         self.vt.flush()
         self._last_screen = "text"
@@ -417,8 +419,9 @@ class IO(IOBase):
         reconstructed from those args alone. Repainting the full grid on
         every callback is cheap at 48x16 characters.
         """
+        if self._last_screen != "graph":
+            self.vt.e("[2J", "[H")
         self._last_screen = "graph"
-        self.vt.e("[2J", "[H")
         for i, line in enumerate(render_braille(self.vm.graph.pixels)):
             self.vt.e("[%i;%iH" % (self.GRAPH_ROW + i, self.GRAPH_COL))
             sys.stdout.write(line)
