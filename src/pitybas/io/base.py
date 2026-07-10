@@ -64,7 +64,7 @@ class IOBase(ABC):
         """Optionally display *msg*, then wait for the user to press Enter."""
 
     @abstractmethod
-    def menu(self, menu: Any) -> Optional[str]:
+    def menu(self, menu: Any) -> Any:
         """Display an interactive menu and return the chosen label.
 
         Args:
@@ -73,7 +73,8 @@ class IOBase(ABC):
                 and *label* is a raw token for ``Goto`` to resolve.
 
         Returns:
-            The label string corresponding to the user's selection.
+            The raw, unevaluated label token corresponding to the user's
+            selection.
         """
 
     @abstractmethod

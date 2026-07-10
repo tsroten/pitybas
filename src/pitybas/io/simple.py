@@ -3,7 +3,7 @@ try:
 except ImportError:
     pass
 
-from typing import Any, Optional
+from typing import Any
 
 from pitybas.parse import Parser
 from pitybas.common import ParseError
@@ -45,7 +45,7 @@ class IO(IOBase):
             self.disp(msg)
         self.input("[press enter]", True)
 
-    def menu(self, menu: Any) -> Optional[str]:
+    def menu(self, menu: Any) -> Any:
         # menu is a tuple of (title, [(desc, label)]) -- title/desc are
         # already-evaluated display strings; label is a raw, unevaluated
         # token for Goto to resolve.

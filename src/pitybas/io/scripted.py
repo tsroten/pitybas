@@ -99,7 +99,7 @@ class ScriptedIO(IOBase):
         if msg:
             self.disp(msg)
 
-    def menu(self, menu: Any) -> Optional[str]:
+    def menu(self, menu: Any) -> Any:
         """Select a menu option by 1-based index drawn from *inputs*.
 
         The next value popped from :attr:`inputs` is treated as a 1-based
