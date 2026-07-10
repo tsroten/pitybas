@@ -269,11 +269,14 @@ class VT:
 
 
 class IO(IOBase):
-    # Fixed screen layout: the 16x8 text screen (VT, above) occupies
-    # terminal rows 1-8, row 9 is reserved for Input/Prompt's prompt line
-    # (see input() below, which moves to row 9), and the 48x16 Braille
-    # graph region starts at row 10, so none of the three ever overlap.
-    GRAPH_ROW = 10
+    # The text home screen (VT) and the Braille graph region share the same
+    # terminal area, starting at row 1, so only one is ever on-screen at a
+    # time -- mirroring how text and graph are mutually exclusive full-screen
+    # modes on real TI-83/84 hardware.  Switching to the graph clears the
+    # terminal first; switching back to text calls vt.flush(), which clears
+    # the graph and redraws the home-screen content.  Row 9 is still reserved
+    # as the input-prompt line (see input() below).
+    GRAPH_ROW = 1
     GRAPH_COL = 1
 
     def __init__(self, vm: "Interpreter") -> None:
@@ -281,11 +284,11 @@ class IO(IOBase):
         self.vt = VT()
         # Which full-screen view a real TI-83/84 would currently be
         # showing: "text" (home screen) or "graph". Graph-drawing calls
-        # switch to "graph"; anything that displays home-screen content
-        # (Disp, Output(, Input/Prompt/Pause, Menu(, ClrHome) switches
-        # back to "text" -- mirroring how the two screens are mutually
-        # exclusive full-screen modes on real hardware, not simultaneously
-        # visible regions like the vt100 terminal layout below.
+        # switch to "graph" (clearing the home screen first); anything that
+        # displays home-screen content (Disp, Output(, Input/Prompt/Pause,
+        # Menu(, ClrHome) switches back to "text" (clearing the graph) --
+        # mirroring how the two screens are mutually exclusive full-screen
+        # modes on real hardware.
         self._last_screen = "text"
 
     def __enter__(self) -> "IO":
@@ -320,6 +323,8 @@ class IO(IOBase):
 
     def input(self, msg: str, is_str: bool = False) -> Any:
         # TODO: implement this in VT terms
+        if self._last_screen == "graph":
+            self.vt.flush()
         self._last_screen = "text"
         while True:
             try:
@@ -360,6 +365,9 @@ class IO(IOBase):
     def disp(self, msg: object = "") -> None:
         if isinstance(msg, (complex, int, float)):
             msg = str(msg).rjust(16)
+
+        if self._last_screen == "graph":
+            self.vt.flush()
 
         self.vt.write(msg)
         self._last_screen = "text"
@@ -410,11 +418,10 @@ class IO(IOBase):
         every callback is cheap at 48x16 characters.
         """
         self._last_screen = "graph"
-        self.vt.e("7")
+        self.vt.e("[2J", "[H")
         for i, line in enumerate(render_braille(self.vm.graph.pixels)):
             self.vt.e("[%i;%iH" % (self.GRAPH_ROW + i, self.GRAPH_COL))
             sys.stdout.write(line)
-        self.vt.e("8")
         sys.stdout.flush()
 
     def draw_pixel(self, px: int, py: int, on: bool) -> None:

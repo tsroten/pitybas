@@ -621,6 +621,39 @@ def test_last_screen_is_text_after_menu(io_obj, monkeypatch):
     assert io_obj._last_screen == "text"
 
 
+# ── IO: screen switching (mutual exclusion) ───────────────────────────────────
+
+
+def test_disp_clears_graph_when_switching_from_graph_to_text(io_obj, capsys):
+    # Switching from graph to text via disp() must clear the graph first so
+    # the two screens are never visible at the same time.
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_pixel(0, 0, True)
+    capsys.readouterr()  # discard graph output
+
+    io_obj.disp("hi")
+    out = capsys.readouterr().out
+    # The graph braille character must NOT be in the text-screen output --
+    # a clear (\033[2J) was issued before repainting the home screen.
+    assert chr(BRAILLE_BASE + 0x01) not in out
+    assert "\033[2J" in out
+
+
+def test_input_clears_graph_when_switching_from_graph_to_text(
+    io_obj, monkeypatch, capsys
+):
+    # Switching from graph to text via input() must flush the text screen
+    # (clearing the graph) before showing the input prompt.
+    io_obj.vm.graph.set_pixel(0, 0, True)
+    io_obj.draw_pixel(0, 0, True)
+    capsys.readouterr()  # discard graph output
+
+    monkeypatch.setattr("builtins.input", lambda *_: "42")
+    io_obj.input("val?")
+    out = capsys.readouterr().out
+    assert "\033[2J" in out
+
+
 # ── IO: clear ────────────────────────────────────────────────────────────────
 
 
@@ -881,11 +914,13 @@ def test_io_draw_pixel_writes_every_graph_row(io_obj, capsys):
         assert ("\033[%i;1H" % (IO.GRAPH_ROW + i)) in out
 
 
-def test_io_draw_pixel_saves_and_restores_cursor(io_obj, capsys):
+def test_io_draw_pixel_clears_screen_before_drawing(io_obj, capsys):
+    # Graph rendering must clear the terminal before painting so any text
+    # content left on the home screen is not visible simultaneously with the
+    # graph (text and graph are mutually exclusive full-screen modes).
     io_obj.draw_pixel(0, 0, True)
     out = capsys.readouterr().out
-    assert out.startswith("\0337")
-    assert out.endswith("\0338")
+    assert out.startswith("\033[2J")
 
 
 def test_io_clr_draw_blanks_graph_region(io_obj, capsys):
