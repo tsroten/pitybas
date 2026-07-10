@@ -41,7 +41,7 @@ pb = "pitybas.cli:main"
 
 [project.optional-dependencies]
 test = ["pytest"]
-lint = ["ruff"]
+lint = ["ruff", "mypy"]
 
 [tool.setuptools.dynamic]
 version = { attr = "pitybas.__version__" }
@@ -60,3 +60,22 @@ select = ["E", "F", "W"]
 ignore = [
     "E741",  # ambiguous variable name: single-letter list variables are intentional in this TI-BASIC interpreter
 ]
+
+[tool.mypy]
+python_version = "3.9"
+files = ["src/pitybas"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+# The token/expression/interpreter core is a metaclass-based token registry
+# with duck-typed AST nodes (class-level attributes like `arg`/`absorbs`/`end`
+# are deliberately overridden with different types in subclasses). Leave it
+# unchecked for now rather than blocking CI; tighten module-by-module as
+# each one gets annotated (see THO-23).
+[[tool.mypy.overrides]]
+module = [
+    "pitybas.tokens",
+    "pitybas.token_core",
+    "pitybas.expression",
+]
+ignore_errors = true

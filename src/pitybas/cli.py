@@ -1,13 +1,14 @@
 import sys
 import traceback
 from optparse import OptionParser
+from typing import List, Optional
 
 from .interpret import Interpreter, Repl
 from .common import Error
 from pitybas.io.vt100 import IO as vt100
 
 
-def main(argv=None):
+def main(argv: Optional[List[str]] = None) -> None:
     parser = OptionParser(usage="Usage: pb [options] filename")
     parser.add_option(
         "-a",

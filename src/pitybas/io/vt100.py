@@ -12,6 +12,11 @@ import sys
 import termios
 import time
 import tty
+from types import TracebackType
+from typing import Any, List, Optional, Sequence, Type, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pitybas.interpret import Interpreter
 
 keycodes = {
     "left": 24,
@@ -80,7 +85,7 @@ GRAPH_COLS = 48  # ceil(PIXEL_COLS / 2)
 GRAPH_ROWS = 16  # ceil(PIXEL_ROWS / 4)
 
 
-def render_braille(pixels):
+def render_braille(pixels: Sequence[Sequence[bool]]) -> List[str]:
     """Render a row-major pixel buffer as Braille text.
 
     Args:
@@ -114,49 +119,50 @@ class Delayed:
     ensure at least duration time between __enter__ and __exit__
     """
 
-    def __init__(self, duration):
+    def __init__(self, duration: float) -> None:
         self.duration = duration
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         self.start = time.time()
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: object) -> None:
         diff = self.duration - (time.time() - self.start)
         if diff > 0:
             time.sleep(diff)
 
 
 class SafeIO:
-    def __init__(self, fd):
+    def __init__(self, fd: int) -> None:
         self.fd = fd
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         self.old = termios.tcgetattr(self.fd)
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: object) -> None:
         termios.tcsetattr(self.fd, termios.TCSANOW, self.old)
 
 
 class VT:
-    def __init__(self, width=16, height=8):
+    def __init__(self, width: int = 16, height: int = 8) -> None:
         self.width = width
         self.height = height
+        self.lines: List[List[str]] = []
         self.clear()
 
         self.row, self.col = 1, 1
-        self.pos_stack = []
+        self.pos_stack: List[tuple[int, int]] = []
 
-    def push(self):
+    def push(self) -> None:
         self.pos_stack.append((self.row, self.col))
 
-    def pop(self):
+    def pop(self) -> None:
         self.row, self.col = self.pos_stack.pop()
 
-    def e(self, *seqs):
+    def e(self, *seqs: str) -> None:
         for seq in seqs:
             sys.stdout.write("\033" + seq)
 
-    def clear(self, reset=True):
+    def clear(self, reset: bool = True) -> None:
         self.e("[2J", "[H")
         self.row, self.col = 1, 1
         if reset:
@@ -164,32 +170,32 @@ class VT:
             for i in range(self.height):
                 self.lines.append([" "] * self.width)
 
-    def scroll(self):
+    def scroll(self) -> None:
         self.lines.pop(0)
         self.lines.append([" "] * self.width)
         self.row = max(1, self.row - 1)
 
-    def flush(self):
+    def flush(self) -> None:
         self.clear(reset=False)
         data = "\n".join("".join(line) for line in self.lines) + "\n"
         sys.stdout.write(data)
 
-    def move(self, row, col):
+    def move(self, row: int, col: int) -> None:
         self.row, self.col = row, col
         self.e("[%i;%iH" % (row, col))
 
-    def wrap(self, msg):
+    def wrap(self, msg: object) -> List[str]:
         msg = str(msg)
         first = self.width - self.col + 1
-        first, msg = msg[:first], msg[first:]
-        lines = [first]
+        first_line, msg = msg[:first], msg[first:]
+        lines = [first_line]
         while msg:
             lines.append(msg[: self.width])
             msg = msg[self.width :]
 
         return lines
 
-    def write(self, msg, scroll=True):
+    def write(self, msg: object, scroll: bool = True) -> None:
         row, col = self.row, self.col
         self.e("[%i;%iH" % (row, col))
 
@@ -216,7 +222,7 @@ class VT:
 
         self.row, self.col = row, col
 
-    def output(self, row, col, msg):
+    def output(self, row: int, col: int, msg: object) -> None:
         self.e("7")
         old = self.row, self.col
         self.move(row, col)
@@ -225,7 +231,7 @@ class VT:
         self.row, self.col = old
         self.e("8")
 
-    def getch(self):
+    def getch(self) -> Optional[str]:
         fd = sys.stdin.fileno()
 
         with SafeIO(fd):
@@ -234,7 +240,7 @@ class VT:
             with Delayed(0.1):
                 ins, _, _ = select.select([sys.stdin], [], [], 0.1)
             if not ins:
-                return
+                return None
 
             ch = sys.stdin.read(1)
             if ch == "\003":
@@ -270,7 +276,7 @@ class IO(IOBase):
     GRAPH_ROW = 10
     GRAPH_COL = 1
 
-    def __init__(self, vm):
+    def __init__(self, vm: "Interpreter") -> None:
         self.vm = vm
         self.vt = VT()
         # Which full-screen view a real TI-83/84 would currently be
@@ -282,11 +288,16 @@ class IO(IOBase):
         # visible regions like the vt100 terminal layout below.
         self._last_screen = "text"
 
-    def __enter__(self):
+    def __enter__(self) -> "IO":
         self.vt.e("[?25l")
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         # Mirror a real TI-83/84: if the graph screen is still the active
         # view when the program stops, it stays up until the user
         # dismisses it, rather than the process exiting straight back to
@@ -303,11 +314,11 @@ class IO(IOBase):
         finally:
             self.vt.e("[?25h")
 
-    def clear(self):
+    def clear(self) -> None:
         self.vt.clear()
         self._last_screen = "text"
 
-    def input(self, msg, is_str=False):
+    def input(self, msg: str, is_str: bool = False) -> Any:
         # TODO: implement this in VT terms
         self._last_screen = "text"
         while True:
@@ -334,31 +345,31 @@ class IO(IOBase):
                 print("ERR:DATA")
                 print()
 
-    def getkey(self):
+    def getkey(self) -> int:
         key = self.vt.getch()
         if key in keycodes:
             return keycodes[key]
         else:
             return 0
 
-    def output(self, row, col, msg):
+    def output(self, row: int, col: int, msg: object) -> None:
         self.vt.output(row, col, msg)
         self.vt.flush()
         self._last_screen = "text"
 
-    def disp(self, msg=""):
+    def disp(self, msg: object = "") -> None:
         if isinstance(msg, (complex, int, float)):
             msg = str(msg).rjust(16)
 
         self.vt.write(msg)
         self._last_screen = "text"
 
-    def pause(self, msg=""):
+    def pause(self, msg: object = "") -> None:
         if msg:
             self.disp(msg)
         self.input("[press enter]", True)
 
-    def menu(self, menu):
+    def menu(self, menu: Any) -> Any:
         # menu is a tuple of (title, [(desc, label)]) -- title/desc are
         # already-evaluated display strings; label is a raw, unevaluated
         # token for Goto to resolve.
@@ -388,7 +399,7 @@ class IO(IOBase):
             else:
                 print("invalid choice")
 
-    def _paint_graph(self):
+    def _paint_graph(self) -> None:
         """Repaint the whole Braille graph region from vm.graph.pixels.
 
         draw_line/draw_circle mutate vm.graph.pixels directly (see
@@ -406,34 +417,34 @@ class IO(IOBase):
         self.vt.e("8")
         sys.stdout.flush()
 
-    def draw_pixel(self, px, py, on):
+    def draw_pixel(self, px: int, py: int, on: bool) -> None:
         self._paint_graph()
 
-    def clr_draw(self):
+    def clr_draw(self) -> None:
         self._paint_graph()
 
-    def draw_line(self, x1, y1, x2, y2, on):
+    def draw_line(self, x1: float, y1: float, x2: float, y2: float, on: bool) -> None:
         self._paint_graph()
 
-    def draw_circle(self, x, y, r, on):
+    def draw_circle(self, x: float, y: float, r: float, on: bool) -> None:
         self._paint_graph()
 
-    def pxl_on(self, row, col):
+    def pxl_on(self, row: int, col: int) -> None:
         self._paint_graph()
 
-    def pxl_off(self, row, col):
+    def pxl_off(self, row: int, col: int) -> None:
         self._paint_graph()
 
-    def pxl_change(self, row, col, on):
+    def pxl_change(self, row: int, col: int, on: bool) -> None:
         self._paint_graph()
 
-    def draw_function(self):
+    def draw_function(self) -> None:
         self._paint_graph()
 
-    def draw_shade(self):
+    def draw_shade(self) -> None:
         self._paint_graph()
 
-    def draw_text_graph(self, row, col, msg):
+    def draw_text_graph(self, row: int, col: int, msg: str) -> None:
         # Stub only: prototyping showed Braille's 2x4 dot resolution is too
         # coarse for pixel-accurate glyph rendering (see THO-16). Real vt100
         # text rendering -- stamping characters onto the nearest Braille
