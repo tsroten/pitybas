@@ -357,6 +357,10 @@ def _solve(f, guess, bounds, tol=1e-10):
     hardware, regardless of guess."""
     if bounds is not None:
         lo, hi = bounds
+        if guess < lo:
+            guess = lo
+        elif guess > hi:
+            guess = hi
         flo, fhi = f(lo), f(hi)
         if flo == 0:
             return lo
