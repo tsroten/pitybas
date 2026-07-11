@@ -11,7 +11,6 @@
 - Added an `IOBase` abstract base class formalizing the IO backend contract shared by `simple`/`vt100`/`ScriptedIO`
 
 ### Changed
-- Added a `uv.lock` for a reproducible dev environment and updated the AGENTS.md "Dev workflow" section to use `uv sync --all-extras` / `uv run` (dev-tooling only, no `src/pitybas` behavior change)
 - Bumped supported Python versions to 3.11–3.14 (`requires-python = ">=3.11"`), updated Trove classifiers, updated mypy target to 3.11, and updated GitHub Actions test matrix and build/lint/publish jobs to target 3.11–3.14
 
 ### Fixed
