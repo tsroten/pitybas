@@ -237,6 +237,11 @@ class Parser:
 
                 self.inc()
                 continue
+            elif char.isdigit() and self.token(sub=True, inc=False) is not None:
+                # word-command tokens that begin with a digit (e.g.
+                # "1-Var Stats") must be matched whole, before the numeric
+                # branch below claims the leading digit as a number literal.
+                result = self.token()
             elif (
                 "0" <= char <= "9"
                 or char == "."

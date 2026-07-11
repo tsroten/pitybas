@@ -560,6 +560,162 @@ class cumSum(Function):
         return out
 
 
+# --- list summary statistics -----------------------------------------------
+#
+# mean(/median(/stdDev(/variance( and 1-Var Stats/2-Var Stats all share the
+# same weighted-moment math. On real TI-83/84 hardware stdDev(/variance( (and
+# the Sx/σx result variables) are computed from a *data list*, so stdDev( and
+# variance( return the SAMPLE statistics (divide by n-1); σx below is the
+# population form (divide by n) exposed only through 1-Var/2-Var Stats.
+
+
+def _stat_args(args):
+    """Split a (list[,freqlist]) function-argument tuple into (values, freqs).
+
+    ``freqs`` is ``None`` when no frequency list was given. A scalar frequency
+    argument is treated as a uniform weight across every value.
+    """
+    assert 1 <= len(args) <= 2
+    values = args[0]
+    assert isinstance(values, list)
+    freqs = None
+    if len(args) == 2:
+        freqs = args[1]
+        if isinstance(freqs, (int, float, complex)):
+            freqs = [freqs] * len(values)
+        assert isinstance(freqs, list)
+    return values, freqs
+
+
+def _moments(values, freqs=None):
+    """Weighted summary moments for a data list.
+
+    Returns a dict with n, sum_x, sum_x2, mean, minimum, maximum, the
+    population variance/std-dev (``pop_var``/``sigma``) and the sample
+    variance/std-dev (``sample_var``/``Sx``). The sample values are ``None``
+    when ``n <= 1`` (undefined). Accepts any non-negative frequencies,
+    fractional weights included. ``min``/``max`` ignore zero-frequency
+    entries, same as the order statistics in ``_expand``.
+    """
+    if not values:
+        raise ExecutionError("ERR:STAT")
+    if freqs is None:
+        freqs = [1] * len(values)
+    if len(freqs) != len(values):
+        raise ExecutionError("ERR:DIM MISMATCH")
+    if any(isinstance(f, complex) for f in freqs):
+        raise ExecutionError("ERR:DATA TYPE")
+    if any(f < 0 for f in freqs):
+        raise ExecutionError("ERR:STAT")
+
+    n = sum(freqs)
+    if n <= 0:
+        raise ExecutionError("ERR:STAT")
+
+    sum_x = sum(f * x for f, x in zip(freqs, values))
+    sum_x2 = sum(f * x * x for f, x in zip(freqs, values))
+    mean = sum_x / n
+    ss = sum(f * (x - mean) ** 2 for f, x in zip(freqs, values))
+    pop_var = ss / n
+
+    if n > 1:
+        sample_var = ss / (n - 1)
+        sx = math.sqrt(sample_var)
+    else:
+        sample_var = None
+        sx = None
+
+    return {
+        "n": n,
+        "sum_x": sum_x,
+        "sum_x2": sum_x2,
+        "mean": mean,
+        "min": min(x for x, f in zip(values, freqs) if f > 0),
+        "max": max(x for x, f in zip(values, freqs) if f > 0),
+        "pop_var": pop_var,
+        "sigma": math.sqrt(pop_var),
+        "sample_var": sample_var,
+        "Sx": sx,
+    }
+
+
+def _expand(values, freqs):
+    """Sorted data list with each value repeated by its (integer) frequency.
+
+    Used for order statistics (median/quartiles), which only make sense over
+    an actual data list. Fractional frequencies raise ``ERR:DOMAIN``.
+    """
+    if freqs is None:
+        freqs = [1] * len(values)
+    if len(freqs) != len(values):
+        raise ExecutionError("ERR:DIM MISMATCH")
+    if any(isinstance(f, complex) for f in freqs):
+        raise ExecutionError("ERR:DATA TYPE")
+
+    out = []
+    for v, f in sorted(zip(values, freqs)):
+        if f < 0 or f != int(f):
+            raise ExecutionError("ERR:DOMAIN")
+        out.extend([v] * int(f))
+    if not out:
+        raise ExecutionError("ERR:STAT")
+    return out
+
+
+def _median_sorted(data):
+    m = len(data)
+    if m % 2:
+        return data[m // 2]
+    return (data[m // 2 - 1] + data[m // 2]) / 2
+
+
+def _quartiles(data):
+    """First and third quartiles using TI's median-of-halves method.
+
+    For an odd-length data list the overall median is excluded from both
+    halves before taking each half's median (matching 1-Var Stats). A
+    single-element data list has no meaningful halves, so Q1 and Q3 both
+    equal that one value.
+    """
+    m = len(data)
+    if m == 1:
+        return data[0], data[0]
+    half = m // 2
+    lower = data[:half]
+    upper = data[half + (m % 2) :]
+    return _median_sorted(lower), _median_sorted(upper)
+
+
+class mean(Function):
+    def call(self, vm, args):
+        values, freqs = _stat_args(args)
+        return _moments(values, freqs)["mean"]
+
+
+class median(Function):
+    def call(self, vm, args):
+        values, freqs = _stat_args(args)
+        return _median_sorted(_expand(values, freqs))
+
+
+class stdDev(Function):
+    def call(self, vm, args):
+        values, freqs = _stat_args(args)
+        sx = _moments(values, freqs)["Sx"]
+        if sx is None:
+            raise ExecutionError("ERR:STAT")
+        return sx
+
+
+class variance(Function):
+    def call(self, vm, args):
+        values, freqs = _stat_args(args)
+        var = _moments(values, freqs)["sample_var"]
+        if var is None:
+            raise ExecutionError("ERR:STAT")
+        return var
+
+
 class SortA(Function):
     descending = False
 
@@ -629,6 +785,34 @@ for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
 
 for i in range(10):
     add_class("Str%i" % i, StrVar)
+
+
+# statistics result variables populated by 1-Var Stats / 2-Var Stats (VARS >
+# Statistics on real hardware). x̄/ȳ carry a combining macron ("x̄");
+# Σ is U+03A3, σ is U+03C3, ² is U+00B2.
+_STAT_RESULT_VARS = {
+    "XBar": "x̄",
+    "SigmaX": "Σx",
+    "SigmaX2": "Σx²",
+    "Sx": "Sx",
+    "PopStdDevX": "σx",
+    "n": "n",
+    "minX": "minX",
+    "Q1": "Q1",
+    "Med": "Med",
+    "Q3": "Q3",
+    "maxX": "maxX",
+    "YBar": "ȳ",
+    "SigmaY": "Σy",
+    "SigmaY2": "Σy²",
+    "Sy": "Sy",
+    "PopStdDevY": "σy",
+    "SigmaXY": "Σxy",
+    "minY": "minY",
+    "maxY": "maxY",
+}
+for _stat_cls, _stat_token in _STAT_RESULT_VARS.items():
+    add_class(_stat_cls, NumVar, token=_stat_token)
 
 
 class GraphVar(Variable, Stub):
@@ -713,6 +897,100 @@ class ClrAllLists(Token):
     def run(self, vm):
         for name in list(vm.lists):
             vm.set_list(name, [])
+
+
+def _stat_command_operands(vm, arg):
+    """Resolve the list operands trailing a 1-Var/2-Var Stats command.
+
+    Each operand is a list name (or list-valued expression); returns their
+    resolved Python-number lists in order. An empty result means the command
+    was written bare and should fall back to its default list(s).
+    """
+    if arg is None:
+        return []
+
+    items = arg.contents if isinstance(arg, Tuple) else [arg]
+    out = []
+    for item in items:
+        if isinstance(item, Expression):
+            item = item.flatten()
+        val = vm.get(item)
+        if not isinstance(val, list):
+            raise ExecutionError("ERR:DATA TYPE")
+        out.append(val)
+    return out
+
+
+def _named_list(vm, name):
+    try:
+        return vm.get_list(name)
+    except KeyError:
+        raise ExecutionError("ERR:UNDEFINED")
+
+
+def _store_x_stats(vm, values, freqs, axis="X"):
+    """Populate the single-variable result vars for one axis (X or Y)."""
+    m = _moments(values, freqs)
+    bar = "x̄" if axis == "X" else "ȳ"
+    vm.set_var(bar, m["mean"])
+    vm.set_var("Σ" + axis.lower(), m["sum_x"])
+    vm.set_var("Σ" + axis.lower() + "²", m["sum_x2"])
+    vm.set_var("S" + axis.lower(), m["Sx"] if m["Sx"] is not None else 0)
+    vm.set_var("σ" + axis.lower(), m["sigma"])
+    vm.set_var("min" + axis, m["min"])
+    vm.set_var("max" + axis, m["max"])
+    return m
+
+
+class OneVarStats(Token):
+    token = "1-Var Stats"
+    absorbs = (Expression, Variable, Tuple)
+
+    def run(self, vm):
+        operands = _stat_command_operands(vm, self.arg)
+        if not operands:
+            values, freqs = _named_list(vm, "1"), None
+        elif len(operands) == 1:
+            values, freqs = operands[0], None
+        elif len(operands) == 2:
+            values, freqs = operands
+        else:
+            raise ExecutionError("ERR:ARGUMENT")
+
+        m = _store_x_stats(vm, values, freqs, "X")
+        vm.set_var("n", m["n"])
+
+        data = _expand(values, freqs)
+        q1, q3 = _quartiles(data)
+        vm.set_var("Q1", q1)
+        vm.set_var("Med", _median_sorted(data))
+        vm.set_var("Q3", q3)
+
+
+class TwoVarStats(Token):
+    token = "2-Var Stats"
+    absorbs = (Expression, Variable, Tuple)
+
+    def run(self, vm):
+        operands = _stat_command_operands(vm, self.arg)
+        if not operands:
+            xs, ys, freqs = _named_list(vm, "1"), _named_list(vm, "2"), None
+        elif len(operands) == 2:
+            (xs, ys), freqs = operands, None
+        elif len(operands) == 3:
+            xs, ys, freqs = operands
+        else:
+            raise ExecutionError("ERR:ARGUMENT")
+
+        if len(xs) != len(ys):
+            raise ExecutionError("ERR:DIM MISMATCH")
+
+        mx = _store_x_stats(vm, xs, freqs, "X")
+        _store_x_stats(vm, ys, freqs, "Y")
+
+        weights = [1] * len(xs) if freqs is None else freqs
+        vm.set_var("Σxy", sum(f * x * y for f, x, y in zip(weights, xs, ys)))
+        vm.set_var("n", mx["n"])
 
 
 # operators
