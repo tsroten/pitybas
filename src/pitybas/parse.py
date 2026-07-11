@@ -242,6 +242,7 @@ class Parser:
                 or char == "."
                 or isinstance(self.token(sub=True, inc=False), tokens.Minus)
                 and self.number(test=True)
+                and self.minus_starts_number()
             ):
                 result = tokens.Value(self.number())
             elif (
@@ -314,6 +315,25 @@ class Parser:
     def close_brackets(self) -> None:
         while self.stack:
             self.add(self.stack.pop())
+
+    def prev_token(self) -> Optional[Any]:
+        if self.stack:
+            items = getattr(self.stack[-1], "contents", None)
+        elif self.lines and self.line < len(self.lines):
+            items = self.lines[self.line]
+        else:
+            items = None
+
+        if items:
+            return items[-1]
+        return None
+
+    def minus_starts_number(self) -> bool:
+        # keep supporting "-<digits>" as a negative literal in most places,
+        # but not after postfix operators (e.g. "!" / "⁻¹" / "°" / "r"),
+        # where a following "-" should remain subtraction.
+        prev = self.prev_token()
+        return not (prev and prev.can_fill_right)
 
     def dms_seconds_pending(self) -> bool:
         items: Optional[List[Any]]

@@ -225,3 +225,16 @@ def test_io_menu_lookup_resets_on_retry(monkeypatch, capsys):
     menu = (("t", [("opt1", "A"), ("opt2", "B")]),)
     assert io.menu(menu) == "B"
     assert capsys.readouterr().out.count("invalid choice") == 2
+
+
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        ("Disp 5!-2", 118),
+        ("Disp 2⁻¹-1", -0.5),
+        ("Degree\nDisp 90°-30", 60),
+        ("Disp (3.14159265358979/2)r-1", 0.570796326794895),
+    ],
+)
+def test_postfix_operator_followed_by_subtraction_keeps_subtraction(expr, expected):
+    assert disp_of(expr)[0] == pytest.approx(expected)
