@@ -63,6 +63,28 @@ def test_tostring_rejects_string_argument():
         disp_of('Disp toString("hi")')
 
 
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        ("Disp ln(e)", 1),
+        ("Disp log(100)", 2),
+        ("Disp logBASE(8,2)", 3),
+        ("Disp e^(1)", math.e),
+        ("Disp 10^(3)", 1000),
+    ],
+)
+def test_log_and_exponential_functions(expr, expected):
+    assert disp_of(expr)[0] == pytest.approx(expected)
+
+
+@pytest.mark.parametrize("expr", ["ln(0)", "log(-1)", "logBASE(8,1)"])
+def test_log_functions_reject_domain_errors(expr):
+    from pitybas.common import ExecutionError
+
+    with pytest.raises(ExecutionError, match="ERR:DOMAIN"):
+        disp_of(f"Disp {expr}")
+
+
 def test_trig_functions_default_to_radian_mode():
     assert disp_of("Disp sin(0)") == [0]
     assert disp_of("Radian\nDisp sin(0)") == [0]

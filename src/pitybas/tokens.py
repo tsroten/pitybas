@@ -1121,6 +1121,23 @@ def listwise(op, left, right):
     return elementwise(op, left, right)
 
 
+def _real_scalar(value):
+    if isinstance(value, list):
+        raise ExecutionError("ERR:DATA TYPE")
+    if isinstance(value, complex):
+        if value.imag == 0:
+            return value.real
+        raise ExecutionError("ERR:NONREAL ANS")
+    return value
+
+
+def _positive_log_arg(value):
+    value = _real_scalar(value)
+    if value <= 0:
+        raise ExecutionError("ERR:DOMAIN")
+    return value
+
+
 def matrix_multiply(left, right):
     rows, mid = len(left), len(left[0])
     mid_b, cols = len(right), len(right[0])
@@ -1238,6 +1255,43 @@ class Sqrt(MathExprFunction):
 
 class sqrt(Sqrt):
     pass
+
+
+class ln(MathExprFunction):
+    def call(self, vm, arg):
+        return math.log(_positive_log_arg(arg))
+
+
+class log(MathExprFunction):
+    def call(self, vm, arg):
+        return math.log10(_positive_log_arg(arg))
+
+
+class logBASE(Function):
+    def call(self, vm, args):
+        if len(args) != 2:
+            raise ExecutionError("ERR:ARGUMENT")
+
+        value = _positive_log_arg(args[0])
+        base = _positive_log_arg(args[1])
+        if base == 1:
+            raise ExecutionError("ERR:DOMAIN")
+
+        return math.log(value, base)
+
+
+class Exp(MathExprFunction):
+    token = "e^"
+
+    def call(self, vm, arg):
+        return math.exp(_real_scalar(arg))
+
+
+class TenPower(MathExprFunction):
+    token = "10^"
+
+    def call(self, vm, arg):
+        return 10 ** _real_scalar(arg)
 
 
 class CubeRoot(MathExprFunction):
