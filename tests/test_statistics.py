@@ -5,8 +5,10 @@ import pytest
 from conftest import run
 from pitybas.common import ExecutionError
 
-# Result-variable spellings use a decomposed combining macron for x̄/ȳ (no
-# precomposed codepoint exists for x-macron), matching how the tokens register.
+# Result-variable spellings use a decomposed combining macron (COMBINING
+# MACRON, U+0304) for both x-bar and y-bar, matching how the tokens
+# register. x-bar has no precomposed Unicode codepoint; y-bar uses the same
+# decomposed form for consistency even though a precomposed one exists.
 XBAR = "x̄"
 YBAR = "ȳ"
 SIGMA_X = "Σx"
@@ -91,6 +93,11 @@ def test_mismatched_freqlist_length_raises():
         run("Disp mean({1,2,3},{1,1})")
 
 
+def test_complex_freqlist_raises_data_type():
+    with pytest.raises(ExecutionError, match="ERR:DATA TYPE"):
+        run("Disp mean({1,2,3},(-1)^.5)")
+
+
 # --- 1-Var Stats -----------------------------------------------------------
 
 
@@ -128,6 +135,19 @@ def test_one_var_stats_with_freqlist():
     # values 1,2,3 with frequencies 2,1,1 -> mean 1.75, n 4
     vm = run("{1,2,3}->lA\n{2,1,1}->lB\n1-Var Stats lA,lB\nDisp " + XBAR + "\nDisp n")
     assert vm.io.disps == [1.75, 4]
+
+
+def test_one_var_stats_ignores_zero_frequency_for_min_max():
+    # value 1 has frequency 0, so it shouldn't count toward minX/maxX
+    prog = "{1,2,3}->lA\n{0,1,1}->lB\n1-Var Stats lA,lB\nDisp minX\nDisp maxX\nDisp n"
+    vm = run(prog)
+    assert vm.io.disps == [2, 3, 2]
+
+
+def test_one_var_stats_single_element_quartiles():
+    prog = "{5}->lA\n1-Var Stats lA\nDisp Q1\nDisp Med\nDisp Q3"
+    vm = run(prog)
+    assert vm.io.disps == [5, 5, 5]
 
 
 # --- 2-Var Stats -----------------------------------------------------------

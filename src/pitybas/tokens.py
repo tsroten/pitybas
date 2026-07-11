@@ -594,7 +594,8 @@ def _moments(values, freqs=None):
     population variance/std-dev (``pop_var``/``sigma``) and the sample
     variance/std-dev (``sample_var``/``Sx``). The sample values are ``None``
     when ``n <= 1`` (undefined). Accepts any non-negative frequencies,
-    fractional weights included.
+    fractional weights included. ``min``/``max`` ignore zero-frequency
+    entries, same as the order statistics in ``_expand``.
     """
     if not values:
         raise ExecutionError("ERR:STAT")
@@ -602,6 +603,8 @@ def _moments(values, freqs=None):
         freqs = [1] * len(values)
     if len(freqs) != len(values):
         raise ExecutionError("ERR:DIM MISMATCH")
+    if any(isinstance(f, complex) for f in freqs):
+        raise ExecutionError("ERR:DATA TYPE")
     if any(f < 0 for f in freqs):
         raise ExecutionError("ERR:STAT")
 
@@ -627,8 +630,8 @@ def _moments(values, freqs=None):
         "sum_x": sum_x,
         "sum_x2": sum_x2,
         "mean": mean,
-        "min": min(values),
-        "max": max(values),
+        "min": min(x for x, f in zip(values, freqs) if f > 0),
+        "max": max(x for x, f in zip(values, freqs) if f > 0),
         "pop_var": pop_var,
         "sigma": math.sqrt(pop_var),
         "sample_var": sample_var,
@@ -646,6 +649,8 @@ def _expand(values, freqs):
         freqs = [1] * len(values)
     if len(freqs) != len(values):
         raise ExecutionError("ERR:DIM MISMATCH")
+    if any(isinstance(f, complex) for f in freqs):
+        raise ExecutionError("ERR:DATA TYPE")
 
     out = []
     for v, f in sorted(zip(values, freqs)):
@@ -668,9 +673,13 @@ def _quartiles(data):
     """First and third quartiles using TI's median-of-halves method.
 
     For an odd-length data list the overall median is excluded from both
-    halves before taking each half's median (matching 1-Var Stats).
+    halves before taking each half's median (matching 1-Var Stats). A
+    single-element data list has no meaningful halves, so Q1 and Q3 both
+    equal that one value.
     """
     m = len(data)
+    if m == 1:
+        return data[0], data[0]
     half = m // 2
     lower = data[:half]
     upper = data[half + (m % 2) :]
