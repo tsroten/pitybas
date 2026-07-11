@@ -76,3 +76,36 @@ def test_probability_operator_rejects_matrices(operator, expression):
 )
 def test_probability_operator_preserves_scalar_integer_results(expression, expected):
     assert disp_of(f"Disp {expression}") == expected
+
+
+@pytest.mark.parametrize(
+    "expression,expected",
+    [
+        # r > n has no arrangements/combinations; the real calculator returns 0
+        # rather than erroring.
+        ("5 nPr 7", [0]),
+        ("5 nCr 7", [0]),
+        ("{5,6,7} nPr {6,7,8}", [[0, 0, 0]]),
+        ("{5,6,7} nCr {6,7,8}", [[0, 0, 0]]),
+    ],
+)
+def test_probability_operator_returns_zero_when_r_exceeds_n(expression, expected):
+    assert disp_of(f"Disp {expression}") == expected
+
+
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "5 nPr ⁻1",
+        # Parenthesized so the negation binds to the operand rather than
+        # collapsing into ⁻1 * (1 nPr 2) via operator precedence.
+        "(⁻1) nPr 2",
+        "5 nCr ⁻1",
+        "3 nCr 1.5",
+        "2.5 nPr 1",
+        "{5,6} nCr {1,⁻1}",
+    ],
+)
+def test_probability_operator_rejects_negative_or_non_integer(expression):
+    with pytest.raises(ExecutionError, match="ERR:DOMAIN"):
+        disp_of(f"Disp {expression}")

@@ -574,20 +574,15 @@ def elementwise(op, left, right):
 
 
 def listwise(op, left, right):
-    """Apply a scalar binary op to list operands without accepting matrices."""
+    """Apply a scalar binary op across List operands the way elementwise does
+    (same-length List/List pairs combine element by element, a scalar
+    broadcasts against every element of a List), but reject Matrix operands
+    with ERR:DATA TYPE. Used by operators like nPr/nCr that are defined on
+    scalars and lists but not on matrices on real hardware."""
     if is_matrix(left) or is_matrix(right):
         raise ExecutionError("ERR:DATA TYPE")
 
-    if is_list(left) and is_list(right):
-        if len(left) != len(right):
-            raise ExecutionError("ERR:DIM MISMATCH")
-        return [op(a, b) for a, b in zip(left, right)]
-    elif is_list(left):
-        return [op(a, right) for a in left]
-    elif is_list(right):
-        return [op(left, b) for b in right]
-    else:
-        return op(left, right)
+    return elementwise(op, left, right)
 
 
 def matrix_multiply(left, right):
@@ -1035,26 +1030,43 @@ class atanh(MathExprFunction):
 # probability
 
 
+def _prob_operands(n, r):
+    """Validate a single nPr/nCr operand pair. Both must be non-negative
+    integers; the real calculator raises ERR:DOMAIN for negative or
+    non-integer arguments. Whole-number floats have already been collapsed to
+    int by vm.get() before reaching here, so a lingering float is a genuine
+    non-integer."""
+    if not isinstance(n, int) or not isinstance(r, int) or n < 0 or r < 0:
+        raise ExecutionError("ERR:DOMAIN")
+
+
+def permutations(n, r):
+    _prob_operands(n, r)
+    # On real hardware r > n is not an error; there are simply no arrangements.
+    if r > n:
+        return 0
+    return math.factorial(n) // math.factorial(n - r)
+
+
+def combinations(n, r):
+    _prob_operands(n, r)
+    if r > n:
+        return 0
+    return math.factorial(n) // (math.factorial(r) * math.factorial(n - r))
+
+
 class nPr(Operator):
     priority = Pri.PROB
 
     def op(self, left, right):
-        return listwise(
-            lambda n, r: math.factorial(n) // math.factorial(n - r), left, right
-        )
+        return listwise(permutations, left, right)
 
 
 class nCr(Operator):
     priority = Pri.PROB
 
     def op(self, left, right):
-        return listwise(
-            lambda n, r: (
-                math.factorial(n) // (math.factorial(r) * math.factorial(n - r))
-            ),
-            left,
-            right,
-        )
+        return listwise(combinations, left, right)
 
 
 class Factorial(Exponent):
