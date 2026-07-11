@@ -259,6 +259,264 @@ class seq(Function):
         return out
 
 
+# calculus / root-finding
+#
+# nDeriv(/fnInt(/fMax(/fMin(/solve( all evaluate an expression in terms of a
+# bound variable at arbitrary points, reusing the same mechanism seq( uses
+# above: keep the expression and variable arguments *unevaluated* (raw AST
+# reached through self.arg.contents), then repeatedly bind the variable with
+# vm.set_var() and evaluate the expression with vm.get().
+
+
+def _expr_and_var(arg):
+    """Split a ``(expression, variable, ...)`` argument list into the raw
+    (unevaluated) expression AST and its bound ``Variable``, the way ``seq(``
+    and ``For(`` do."""
+    expr = arg[0]
+    var = arg[1].flatten()
+    if not isinstance(var, Variable):
+        raise ExecutionError("ERR:ARGUMENT")
+    return expr, var
+
+
+def _scalar(value):
+    """Coerce ``value`` to a float, like the calculus/root-finding functions
+    need for their numeric arguments (and the values their bound expressions
+    evaluate to). Raises TI-style ``ExecutionError`` instead of a raw Python
+    exception for List/Matrix operands (``ERR:DATA TYPE``) or complex operands
+    with a nonzero imaginary part (``ERR:NONREAL ANS``)."""
+    if isinstance(value, list):
+        raise ExecutionError("ERR:DATA TYPE")
+    if isinstance(value, complex):
+        if value.imag != 0:
+            raise ExecutionError("ERR:NONREAL ANS")
+        value = value.real
+
+    try:
+        return float(value)
+    except (TypeError, ValueError, OverflowError):
+        raise ExecutionError("ERR:DATA TYPE") from None
+
+
+def _bound_eval(vm, expr, var):
+    """Return a callable ``x -> f(x)`` that binds ``var`` to ``x`` and returns
+    the expression evaluated at that point as a float."""
+
+    def f(x):
+        vm.set_var(var.token, x)
+        return _scalar(vm.get(expr))
+
+    return f
+
+
+def _simpson(fa, fb, fm, a, b):
+    return (b - a) / 6 * (fa + 4 * fm + fb)
+
+
+def _adaptive_simpson(f, a, b, fa, fb, fm, whole, tol, depth):
+    m = (a + b) / 2
+    lm, rm = (a + m) / 2, (m + b) / 2
+    flm, frm = f(lm), f(rm)
+    left = _simpson(fa, fm, flm, a, m)
+    right = _simpson(fm, fb, frm, m, b)
+    if depth <= 0 or abs(left + right - whole) <= 15 * tol:
+        return left + right + (left + right - whole) / 15
+    return _adaptive_simpson(
+        f, a, m, fa, fm, flm, left, tol / 2, depth - 1
+    ) + _adaptive_simpson(f, m, b, fm, fb, frm, right, tol / 2, depth - 1)
+
+
+# golden ratio conjugate, used by the golden-section extrema search below
+_GOLDEN = (math.sqrt(5) - 1) / 2
+
+
+def _golden_section(f, a, b, tol, minimize):
+    """Return the ``x`` in ``[a, b]`` that minimizes (or, when ``minimize`` is
+    False, maximizes) ``f`` via golden-section search."""
+    sign = 1 if minimize else -1
+    c = b - _GOLDEN * (b - a)
+    d = a + _GOLDEN * (b - a)
+    fc, fd = sign * f(c), sign * f(d)
+    for _ in range(1000):
+        if abs(b - a) < tol:
+            break
+        if fc < fd:
+            b, d, fd = d, c, fc
+            c = b - _GOLDEN * (b - a)
+            fc = sign * f(c)
+        else:
+            a, c, fc = c, d, fd
+            d = a + _GOLDEN * (b - a)
+            fd = sign * f(d)
+    return (a + b) / 2
+
+
+def _bisect(f, lo, flo, hi, fhi, tol):
+    """Bisect the sign-changing bracket ``[lo, hi]`` down to ``tol``."""
+    for _ in range(200):
+        mid = (lo + hi) / 2
+        fmid = f(mid)
+        if fmid == 0 or (hi - lo) / 2 < tol:
+            return mid
+        if (fmid < 0) == (flo < 0):
+            lo, flo = mid, fmid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+
+def _solve(f, guess, bounds, tol=1e-10):
+    """Find a root of ``f`` (i.e. ``f(x) == 0``) within ``bounds`` — like the
+    TI-84's ``solve(``, a root is only ever returned if a sign change is
+    found somewhere in ``bounds``, which defaults to the TI-84's own
+    ``{-1E99, 1E99}`` when omitted. If ``bounds`` doesn't already bracket a
+    sign change, search outward from ``guess`` (doubling the step each time)
+    for one to bisect. Raises ``ERR:NO SIGN CHNG`` when none is found —
+    e.g. ``solve(X^2,X,1)`` never crosses zero and always raises this on real
+    hardware, regardless of guess."""
+    if bounds is not None:
+        lo, hi = bounds
+        if guess < lo:
+            guess = lo
+        elif guess > hi:
+            guess = hi
+        flo, fhi = f(lo), f(hi)
+        if flo == 0:
+            return lo
+        if fhi == 0:
+            return hi
+        if (flo < 0) != (fhi < 0):
+            return _bisect(f, lo, flo, hi, fhi, tol)
+    else:
+        # unbounded default matches the TI-84's own {-1E99,1E99}; only used
+        # to clamp the outward search below, never evaluated directly — f(-1e99)
+        # vs. f(1e99) trivially differ in sign for most unbounded functions,
+        # which would make bisecting the *entire* range imprecise
+        lo, hi = -1e99, 1e99
+
+    fguess = f(guess)
+    if fguess == 0:
+        return guess
+
+    step = abs(guess) * 1e-4 or 1e-4
+    a_hi, fa_hi = guess, fguess
+    a_lo, fa_lo = guess, fguess
+    for _ in range(100):
+        step *= 2
+
+        b_hi = min(a_hi + step, hi)
+        fb_hi = f(b_hi)
+        if fb_hi == 0:
+            return b_hi
+        if (fa_hi < 0) != (fb_hi < 0):
+            return _bisect(f, a_hi, fa_hi, b_hi, fb_hi, tol)
+        a_hi, fa_hi = b_hi, fb_hi
+
+        b_lo = max(a_lo - step, lo)
+        fb_lo = f(b_lo)
+        if fb_lo == 0:
+            return b_lo
+        if (fa_lo < 0) != (fb_lo < 0):
+            return _bisect(f, b_lo, fb_lo, a_lo, fa_lo, tol)
+        a_lo, fa_lo = b_lo, fb_lo
+
+        if b_hi >= hi and b_lo <= lo:
+            break
+
+    raise ExecutionError("ERR:NO SIGN CHNG")
+
+
+class nDeriv(Function):
+    """Numerical derivative of ``expr`` with respect to ``var`` at ``value``,
+    using the symmetric difference quotient ``(f(x+H) - f(x-H)) / 2H`` like the
+    TI-84's ``nDeriv(``. ``H`` defaults to ``1e-3``."""
+
+    def get(self, vm):
+        arg = self.arg.contents if self.arg else []
+        if len(arg) not in (3, 4):
+            raise ExecutionError("ERR:ARGUMENT")
+        expr, var = _expr_and_var(arg)
+        x = _scalar(vm.get(arg[2]))
+        h = _scalar(vm.get(arg[3])) if len(arg) == 4 else 1e-3
+        if h == 0:
+            raise ExecutionError("ERR:DOMAIN")
+        f = _bound_eval(vm, expr, var)
+        return (f(x + h) - f(x - h)) / (2 * h)
+
+
+class fnInt(Function):
+    """Numerical definite integral of ``expr`` d``var`` from ``lower`` to
+    ``upper`` via adaptive Simpson's rule, like the TI-84's ``fnInt(``.
+    ``tolerance`` defaults to ``1e-5``."""
+
+    def get(self, vm):
+        arg = self.arg.contents if self.arg else []
+        if len(arg) not in (4, 5):
+            raise ExecutionError("ERR:ARGUMENT")
+        expr, var = _expr_and_var(arg)
+        a, b = _scalar(vm.get(arg[2])), _scalar(vm.get(arg[3]))
+        tol = _scalar(vm.get(arg[4])) if len(arg) == 5 else 1e-5
+        if tol <= 0:
+            raise ExecutionError("ERR:DOMAIN")
+        if a == b:
+            return 0
+        f = _bound_eval(vm, expr, var)
+        fa, fb, fm = f(a), f(b), f((a + b) / 2)
+        whole = _simpson(fa, fb, fm, a, b)
+        return _adaptive_simpson(f, a, b, fa, fb, fm, whole, tol, 50)
+
+
+class fMin(Function):
+    """Return the ``var`` value in ``[lower, upper]`` that minimizes ``expr``,
+    via golden-section search, like the TI-84's ``fMin(``. ``tolerance``
+    defaults to ``1e-5``."""
+
+    minimize = True
+
+    def get(self, vm):
+        arg = self.arg.contents if self.arg else []
+        if len(arg) not in (4, 5):
+            raise ExecutionError("ERR:ARGUMENT")
+        expr, var = _expr_and_var(arg)
+        a, b = _scalar(vm.get(arg[2])), _scalar(vm.get(arg[3]))
+        tol = _scalar(vm.get(arg[4])) if len(arg) == 5 else 1e-5
+        if a > b:
+            a, b = b, a
+        f = _bound_eval(vm, expr, var)
+        return _golden_section(f, a, b, tol, self.minimize)
+
+
+class fMax(fMin):
+    """Return the ``var`` value in ``[lower, upper]`` that maximizes ``expr``,
+    via golden-section search, like the TI-84's ``fMax(``."""
+
+    minimize = False
+
+
+class solve(Function):
+    """Return a ``var`` value where ``expr == 0``, like the TI-84's ``solve(``.
+    Searches from ``guess`` within an optional ``{lower,upper}`` bound
+    (defaulting to the TI-84's own ``{-1E99,1E99}``) for a sign change to
+    bisect. Raises ``ERR:NO SIGN CHNG`` when ``expr`` never changes sign in
+    that range, matching real hardware (e.g. ``solve(X^2,X,1)`` always
+    raises this, since ``X^2`` never crosses zero)."""
+
+    def get(self, vm):
+        arg = self.arg.contents if self.arg else []
+        if len(arg) not in (3, 4):
+            raise ExecutionError("ERR:ARGUMENT")
+        expr, var = _expr_and_var(arg)
+        guess = _scalar(vm.get(arg[2]))
+        bounds = None
+        if len(arg) == 4:
+            b = vm.get(arg[3])
+            if not isinstance(b, list) or len(b) != 2:
+                raise ExecutionError("ERR:ARGUMENT")
+            lo, hi = _scalar(b[0]), _scalar(b[1])
+            bounds = (lo, hi) if lo <= hi else (hi, lo)
+        return _solve(_bound_eval(vm, expr, var), guess, bounds)
+
+
 class Sum(Function):
     token = "sum"
 
@@ -868,6 +1126,40 @@ class mod(Function):
     def call(self, vm, args):
         assert len(args) == 2
         return args[0] % args[1]
+
+
+def _remainder(dividend, divisor):
+    """Whole-number remainder using truncated (toward-zero) division, so the
+    result carries the sign of the dividend, matching the TI-84's remainder(."""
+    if divisor == 0:
+        raise ExecutionError("ERR:DIVIDE BY 0")
+
+    # Keep integer operands in integer arithmetic to avoid precision loss from
+    # float division.
+    if isinstance(dividend, int) and isinstance(divisor, int):
+        q = dividend // divisor
+        if (dividend < 0) != (divisor < 0) and dividend % divisor:
+            q += 1  # convert floor division to truncation toward zero
+        return dividend - divisor * q
+
+    try:
+        q = math.trunc(dividend / divisor)
+    except (TypeError, ValueError, OverflowError, ZeroDivisionError):
+        raise ExecutionError("ERR:DATA TYPE") from None
+    return dividend - divisor * q
+
+
+class remainder(Function):
+    """Whole-number remainder of ``dividend`` divided by ``divisor``, like the
+    TI-84's ``remainder(``. Broadcasts element-wise over List operands
+    (List/scalar, scalar/List, and same-length List/List); Matrix operands
+    aren't supported by real hardware and raise ``ERR:DATA TYPE``, like
+    ``nPr``/``nCr``."""
+
+    def call(self, vm, args):
+        if len(args) != 2:
+            raise ExecutionError("ERR:ARGUMENT")
+        return listwise(_remainder, args[0], args[1])
 
 
 class expr(MathExprFunction):
