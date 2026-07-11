@@ -231,10 +231,11 @@ def test_io_menu_lookup_resets_on_retry(monkeypatch, capsys):
     "expr,expected",
     [
         ("Disp 5!-2", 118),
+        ("Disp (5!-2)*3", 354),
         ("Disp 2⁻¹-1", -0.5),
         ("Degree\nDisp 90°-30", 60),
         ("Disp (3.14159265358979/2)r-1", 0.570796326794895),
     ],
 )
-def test_postfix_operator_followed_by_subtraction_keeps_subtraction(expr, expected):
+def test_postfix_subtraction_not_absorbed(expr, expected):
     assert disp_of(expr)[0] == pytest.approx(expected)

@@ -317,6 +317,7 @@ class Parser:
             self.add(self.stack.pop())
 
     def prev_token(self) -> Optional[Any]:
+        """Return the most recent token in the active parse context, if any."""
         if self.stack:
             items = getattr(self.stack[-1], "contents", None)
         elif self.lines and self.line < len(self.lines):
@@ -329,9 +330,12 @@ class Parser:
         return None
 
     def minus_starts_number(self) -> bool:
+        """Whether '-' should be parsed as part of a negative numeric literal."""
         # keep supporting "-<digits>" as a negative literal in most places,
-        # but not after postfix operators (e.g. "!" / "⁻¹" / "°" / "r"),
-        # where a following "-" should remain subtraction.
+        # but not after postfix operators. In this parser, postfix operator
+        # tokens advertise fill_right(), so can_fill_right flags those tokens
+        # (e.g. "!" / "⁻¹" / "°" / "r"). After such tokens, "-" must remain
+        # subtraction.
         prev = self.prev_token()
         return not (prev and prev.can_fill_right)
 
