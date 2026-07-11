@@ -92,13 +92,20 @@ behavior for a specific command — not required reading otherwise.
 
 ## Dev workflow
 
+The repo ships a `uv.lock` for a reproducible dev environment. Use `uv` (which reads the
+lockfile) rather than bare `pip`/`pytest`:
+
 ```
-pip install -e ".[test,lint]"
-python -m pytest
-ruff check src/ tests/
-ruff format src/ tests/
-mypy                            # only checks src/pitybas, not tests/
+uv sync --all-extras          # install runtime + test/lint deps from uv.lock
+uv run pytest
+uv run ruff check src/ tests/
+uv run ruff format src/ tests/
+uv run mypy                     # only checks src/pitybas, not tests/
 ```
+
+If you change dependencies in `pyproject.toml`, run `uv lock` and commit the updated
+`uv.lock`. (Plain `pip install -e ".[test,lint]"` still works if you'd rather not use
+`uv`, but it resolves unpinned versions instead of the locked ones.)
 
 CI (`.github/workflows/tests.yml`) runs pytest across Python 3.11–3.14 — don't rely on
 3.15+-only stdlib behavior in `src/`, but 3.10-and-earlier-only constructs no longer need
