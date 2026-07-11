@@ -12,6 +12,8 @@ corresponding entry under `## Unreleased` in `CHANGELOG.md` in the same change.*
 repo treats the changelog as the source of truth for what shipped (see "Release process"
 below); it's not optional bookkeeping reserved for features.
 
+Only review pull requests when explicitly mentioned or assigned.
+
 ## Testing a TI-BASIC program: the pattern
 
 ```python
