@@ -68,6 +68,22 @@ class Parser:
     def error(self, msg: str) -> None:
         raise ParseError(msg)
 
+    def _prev_token(self) -> Any:
+        """Return the last token in the current expression context.
+
+        Checks the top stack frame first (inside brackets/function args),
+        then falls back to the current top-level line.  Returns *None* when
+        the current expression is empty (start of a new line or bracket).
+        """
+        if self.stack:
+            contents = getattr(self.stack[-1], "contents", None)
+            if contents:
+                return contents[-1]
+            return None
+        if self.lines and self.line < len(self.lines) and self.lines[self.line]:
+            return self.lines[self.line][-1]
+        return None
+
     def inc(self, n: int = 1) -> None:
         self.pos += n
 
@@ -240,8 +256,11 @@ class Parser:
             elif (
                 "0" <= char <= "9"
                 or char == "."
-                or isinstance(self.token(sub=True, inc=False), tokens.Minus)
-                and self.number(test=True)
+                or (
+                    isinstance(self.token(sub=True, inc=False), tokens.Minus)
+                    and self.number(test=True)
+                    and not getattr(self._prev_token(), "can_fill_right", False)
+                )
             ):
                 result = tokens.Value(self.number())
             elif (

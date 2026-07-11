@@ -84,6 +84,20 @@ one failed attempt a 2-item menu's `lookup` held 4 entries. A choice of
 '3' (one beyond the displayed range) then became valid and returned the
 wrong label. Fixed by moving `lookup = []` inside the loop so it is
 rebuilt fresh on every display/prompt cycle.
+
+Bug 12 (fixed): Parser.parse (pitybas/parse.py) used `isinstance(...,
+tokens.Minus) and self.number(test=True)` to decide whether `-` begins a
+negative-number literal.  When a postfix operator such as `²`, `³`, `⁻¹`,
+or `!` (all of which set `can_fill_right = True`) was the immediately
+preceding token, the `-` was still treated as a negative sign and the
+resulting `Value(-n)` was silently consumed as the postfix operator's
+right-hand operand — which those operators ignore — dropping the
+subtraction entirely (e.g. `X²-4` evaluated as `X²`, returning 9 for
+X=3 instead of 5).  Fixed by adding a `_prev_token()` helper that returns
+the last token appended in the current expression context (top stack frame
+or current line), and guarding the negative-literal branch: if the
+previous token has `can_fill_right=True`, `-` is left for the symbol
+dispatcher to pick up as `Minus` (subtraction).
 """
 
 import io as std_io
@@ -225,3 +239,26 @@ def test_io_menu_lookup_resets_on_retry(monkeypatch, capsys):
     menu = (("t", [("opt1", "A"), ("opt2", "B")]),)
     assert io.menu(menu) == "B"
     assert capsys.readouterr().out.count("invalid choice") == 2
+
+
+@pytest.mark.parametrize(
+    "source,expected",
+    [
+        # Square postfix (²) — the originally reported case
+        ("3→X:Disp X²-4", 5),
+        ("3→X:Disp X² -4", 5),  # space before -
+        # Cube postfix (³)
+        ("3→X:Disp X³-4", 23),
+        # Inside parentheses
+        ("3→X:Disp (X²-4)", 5),
+        # Factorial postfix (!)
+        ("Disp 5!-2", 118),
+        # Subtraction after addition with postfix still works
+        ("3→X:Disp X²+4", 13),
+    ],
+)
+def test_postfix_operator_subtraction_not_dropped(source, expected):
+    """Reproduces bug 12: `-` immediately after a postfix operator (², ³,
+    ⁻¹, !) was parsed as a negative-number literal instead of a subtraction
+    operator, so the subtraction was silently dropped."""
+    assert disp_of(source) == [expected]
