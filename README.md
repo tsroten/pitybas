@@ -65,30 +65,36 @@ Recorded attributes:
 
 ## Development
 
-Clone the repository and install it in editable mode with the test and lint extras:
+This repository ships a `uv.lock` for a reproducible dev environment. Clone the
+repository and install the runtime, test, and lint dependencies from the lockfile
+with [uv](https://docs.astral.sh/uv/):
 
-    pip install -e ".[test,lint]"
+    uv sync --all-extras
+
+If you change dependencies in `pyproject.toml`, run `uv lock` and commit the updated
+`uv.lock`. (Plain `pip install -e ".[test,lint]"` still works if you'd rather not use
+`uv`, but it resolves unpinned versions instead of the locked ones.)
 
 ### Running tests
 
-    python -m pytest
+    uv run pytest
 
 ### Linting
 
 Check for lint violations:
 
-    ruff check src/ tests/
+    uv run ruff check src/ tests/
 
 Fix auto-fixable violations:
 
-    ruff check --fix src/ tests/
+    uv run ruff check --fix src/ tests/
 
 ### Formatting
 
 Check formatting without making changes:
 
-    ruff format --check src/ tests/
+    uv run ruff format --check src/ tests/
 
 Apply formatting:
 
-    ruff format src/ tests/
+    uv run ruff format src/ tests/
