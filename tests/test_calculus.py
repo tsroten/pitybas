@@ -103,7 +103,7 @@ def test_fmax_wrong_arg_count():
 @pytest.mark.parametrize(
     "source,expected",
     [
-        # the guess selects which root Newton converges to
+        # the guess selects which root the outward bracket search converges to
         ("Disp solve(X^2-4,X,3)", 2),
         ("Disp solve(X^2-4,X,-3)", -2),
         ("Disp solve(2X-8,X,0)", 4),
@@ -120,6 +120,15 @@ def test_solve(source, expected):
 def test_solve_no_root_raises():
     with pytest.raises(ExecutionError, match="ERR:NO SIGN CHNG"):
         disp_of("Disp solve(X^2+1,X,3,{0,5})")
+
+
+def test_solve_no_bounds_no_sign_change_raises():
+    # matches real hardware exactly: TI's own knowledge base uses solve(X^2,X,guess)
+    # as *the* canonical ERR:NO SIGN CHNG example, since X^2 never crosses zero -
+    # this must raise even with no {lower,upper} given (default bounds are
+    # {-1E99,1E99}, not "fall back to an unconstrained root finder")
+    with pytest.raises(ExecutionError, match="ERR:NO SIGN CHNG"):
+        disp_of("Disp solve(X^2,X,1)")
 
 
 def test_solve_wrong_arg_count():
@@ -170,3 +179,10 @@ def test_remainder_dim_mismatch():
 def test_remainder_wrong_arg_count():
     with pytest.raises(ExecutionError, match="ERR:ARGUMENT"):
         disp_of("Disp remainder(5)")
+
+
+def test_remainder_matrix_rejected():
+    # remainder( isn't defined for Matrix operands on real hardware (unlike
+    # Lists), matching how nPr/nCr (also scalar-domain functions) reject them
+    with pytest.raises(ExecutionError, match="ERR:DATA TYPE"):
+        disp_of("[[1,2][3,4]]->[A]\n[[1,1][1,1]]->[B]\nDisp remainder([A],[B])")

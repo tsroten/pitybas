@@ -332,10 +332,29 @@ def _golden_section(f, a, b, tol, minimize):
     return (a + b) / 2
 
 
+def _bisect(f, lo, flo, hi, fhi, tol):
+    """Bisect the sign-changing bracket ``[lo, hi]`` down to ``tol``."""
+    for _ in range(200):
+        mid = (lo + hi) / 2
+        fmid = f(mid)
+        if fmid == 0 or (hi - lo) / 2 < tol:
+            return mid
+        if (fmid < 0) == (flo < 0):
+            lo, flo = mid, fmid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+
 def _solve(f, guess, bounds, tol=1e-10):
-    """Find a root of ``f`` (i.e. ``f(x) == 0``). When ``bounds`` brackets a
-    sign change, use bisection; otherwise fall back to Newton's method from
-    ``guess``."""
+    """Find a root of ``f`` (i.e. ``f(x) == 0``) within ``bounds`` — like the
+    TI-84's ``solve(``, a root is only ever returned if a sign change is
+    found somewhere in ``bounds``, which defaults to the TI-84's own
+    ``{-1E99, 1E99}`` when omitted. If ``bounds`` doesn't already bracket a
+    sign change, search outward from ``guess`` (doubling the step each time)
+    for one to bisect. Raises ``ERR:NO SIGN CHNG`` when none is found —
+    e.g. ``solve(X^2,X,1)`` never crosses zero and always raises this on real
+    hardware, regardless of guess."""
     if bounds is not None:
         lo, hi = bounds
         flo, fhi = f(lo), f(hi)
@@ -344,35 +363,43 @@ def _solve(f, guess, bounds, tol=1e-10):
         if fhi == 0:
             return hi
         if (flo < 0) != (fhi < 0):
-            for _ in range(200):
-                mid = (lo + hi) / 2
-                fmid = f(mid)
-                if fmid == 0 or (hi - lo) / 2 < tol:
-                    return mid
-                if (fmid < 0) == (flo < 0):
-                    lo, flo = mid, fmid
-                else:
-                    hi, fhi = mid, fmid
-            return (lo + hi) / 2
+            return _bisect(f, lo, flo, hi, fhi, tol)
+    else:
+        # unbounded default matches the TI-84's own {-1E99,1E99}; only used
+        # to clamp the outward search below, never evaluated directly — f(-1e99)
+        # vs. f(1e99) trivially differ in sign for most unbounded functions,
+        # which would make bisecting the *entire* range imprecise
+        lo, hi = -1e99, 1e99
 
-    x = guess
+    fguess = f(guess)
+    if fguess == 0:
+        return guess
+
+    step = abs(guess) * 1e-4 or 1e-4
+    a_hi, fa_hi = guess, fguess
+    a_lo, fa_lo = guess, fguess
     for _ in range(100):
-        fx = f(x)
-        if abs(fx) < tol:
-            return x
-        h = 1e-6 * (abs(x) + 1)
-        dfx = (f(x + h) - f(x - h)) / (2 * h)
-        if dfx == 0:
-            break
-        x_new = x - fx / dfx
-        if bounds is not None and not (bounds[0] <= x_new <= bounds[1]):
-            break
-        if abs(x_new - x) < tol:
-            return x_new
-        x = x_new
+        step *= 2
 
-    if abs(f(x)) < 1e-6:
-        return x
+        b_hi = min(a_hi + step, hi)
+        fb_hi = f(b_hi)
+        if fb_hi == 0:
+            return b_hi
+        if (fa_hi < 0) != (fb_hi < 0):
+            return _bisect(f, a_hi, fa_hi, b_hi, fb_hi, tol)
+        a_hi, fa_hi = b_hi, fb_hi
+
+        b_lo = max(a_lo - step, lo)
+        fb_lo = f(b_lo)
+        if fb_lo == 0:
+            return b_lo
+        if (fa_lo < 0) != (fb_lo < 0):
+            return _bisect(f, b_lo, fb_lo, a_lo, fa_lo, tol)
+        a_lo, fa_lo = b_lo, fb_lo
+
+        if b_hi >= hi and b_lo <= lo:
+            break
+
     raise ExecutionError("ERR:NO SIGN CHNG")
 
 
@@ -443,9 +470,11 @@ class fMax(fMin):
 
 class solve(Function):
     """Return a ``var`` value where ``expr == 0``, like the TI-84's ``solve(``.
-    Starts from ``guess``; an optional ``{lower,upper}`` list restricts the
-    search and enables bisection when it brackets a sign change. Raises
-    ``ERR:NO SIGN CHNG`` when no root can be found."""
+    Searches from ``guess`` within an optional ``{lower,upper}`` bound
+    (defaulting to the TI-84's own ``{-1E99,1E99}``) for a sign change to
+    bisect. Raises ``ERR:NO SIGN CHNG`` when ``expr`` never changes sign in
+    that range, matching real hardware (e.g. ``solve(X^2,X,1)`` always
+    raises this, since ``X^2`` never crosses zero)."""
 
     def get(self, vm):
         arg = self.arg.contents if self.arg else []
@@ -1085,12 +1114,14 @@ def _remainder(dividend, divisor):
 class remainder(Function):
     """Whole-number remainder of ``dividend`` divided by ``divisor``, like the
     TI-84's ``remainder(``. Broadcasts element-wise over List operands
-    (List/scalar, scalar/List, and same-length List/List)."""
+    (List/scalar, scalar/List, and same-length List/List); Matrix operands
+    aren't supported by real hardware and raise ``ERR:DATA TYPE``, like
+    ``nPr``/``nCr``."""
 
     def call(self, vm, args):
         if len(args) != 2:
             raise ExecutionError("ERR:ARGUMENT")
-        return elementwise(_remainder, args[0], args[1])
+        return listwise(_remainder, args[0], args[1])
 
 
 class expr(MathExprFunction):
