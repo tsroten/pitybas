@@ -1109,6 +1109,19 @@ def elementwise(op, left, right):
         return op(left, right)
 
 
+def unary_listwise(op, value):
+    """Apply a scalar unary op to a scalar or each element of a List.
+
+    Matrix operands are rejected for scalar-domain calculator functions whose
+    guidebook entries support real numbers and Lists, but not Matrices.
+    """
+    if is_matrix(value):
+        raise ExecutionError("ERR:DATA TYPE")
+    if is_list(value):
+        return [op(item) for item in value]
+    return op(value)
+
+
 def listwise(op, left, right):
     """Apply a scalar binary op across List operands the way elementwise does
     (same-length List/List pairs combine element by element, a scalar
@@ -1445,6 +1458,82 @@ class expr(MathExprFunction):
         from .parse import Parser
 
         return Parser.parse_line(vm, arg)
+
+
+# logarithmic/exponential functions
+
+
+def _domain_checked(op, *args):
+    try:
+        return op(*args)
+    except TypeError:
+        raise ExecutionError("ERR:DATA TYPE") from None
+    except (ValueError, OverflowError, ZeroDivisionError):
+        raise ExecutionError("ERR:DOMAIN") from None
+
+
+def _ln(value):
+    return _domain_checked(math.log, value)
+
+
+def _log10(value):
+    return _domain_checked(math.log10, value)
+
+
+def _logbase(value, base):
+    if base == 1:
+        raise ExecutionError("ERR:DOMAIN")
+    return _domain_checked(math.log, value, base)
+
+
+def _exp(value):
+    return _domain_checked(math.exp, value)
+
+
+def _pow10(value):
+    return _domain_checked(lambda exponent: 10**exponent, value)
+
+
+class UnaryListMathFunction(MathExprFunction, Stub):
+    def get(self, vm):
+        args = vm.get(self.arg)
+        if len(args) != 1:
+            raise ExecutionError("ERR:ARGUMENT")
+        return unary_listwise(self.scalar_call, args[0])
+
+    def scalar_call(self, arg):
+        raise NotImplementedError
+
+
+class ln(UnaryListMathFunction):
+    def scalar_call(self, arg):
+        return _ln(arg)
+
+
+class log(UnaryListMathFunction):
+    def scalar_call(self, arg):
+        return _log10(arg)
+
+
+class logBASE(Function):
+    def call(self, vm, args):
+        if len(args) != 2:
+            raise ExecutionError("ERR:ARGUMENT")
+        return listwise(_logbase, args[0], args[1])
+
+
+class ExpBaseE(UnaryListMathFunction):
+    token = "e^"
+
+    def scalar_call(self, arg):
+        return _exp(arg)
+
+
+class ExpBase10(UnaryListMathFunction):
+    token = "10^"
+
+    def scalar_call(self, arg):
+        return _pow10(arg)
 
 
 # trig

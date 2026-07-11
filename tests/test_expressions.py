@@ -197,6 +197,67 @@ def test_math_functions():
 @pytest.mark.parametrize(
     "expr,expected",
     [
+        ("Disp ln(e)", 1),
+        ("Disp log(100)", 2),
+        ("Disp logBASE(8,2)", 3),
+        ("Disp e^(2)", math.e**2),
+        ("Disp 10^(3)", 1000),
+    ],
+)
+def test_logarithmic_and_exponential_functions(expr, expected):
+    assert disp_of(expr)[0] == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
+        ("Disp ln({1,e,e^2})", [0, 1, 2]),
+        ("Disp log({1,10,100})", [0, 1, 2]),
+        ("Disp logBASE({8,27},{2,3})", [3, 3]),
+        ("Disp logBASE({8,27},2)", [3, pytest.approx(math.log(27, 2))]),
+        ("Disp e^({0,1})", [1, math.e]),
+        ("Disp 10^({0,2})", [1, 100]),
+    ],
+)
+def test_logarithmic_and_exponential_list_broadcasting(expr, expected):
+    assert disp_of(expr) == [expected]
+
+
+def test_logbase_list_dim_mismatch_raises():
+    from pitybas.common import ExecutionError
+
+    with pytest.raises(ExecutionError, match="ERR:DIM MISMATCH"):
+        disp_of("Disp logBASE({8,27,64},{2,3})")
+
+
+def test_logarithmic_domain_errors():
+    from pitybas.common import ExecutionError
+
+    with pytest.raises(ExecutionError, match="ERR:DOMAIN"):
+        disp_of("Disp ln(0)")
+    with pytest.raises(ExecutionError, match="ERR:DOMAIN"):
+        disp_of("Disp logBASE(8,1)")
+
+
+def test_logarithmic_wrong_arg_count_raises_argument_error():
+    from pitybas.common import ExecutionError
+
+    with pytest.raises(ExecutionError, match="ERR:ARGUMENT"):
+        disp_of("Disp ln(1,2)")
+    with pytest.raises(ExecutionError, match="ERR:ARGUMENT"):
+        disp_of("Disp e^(1,2)")
+
+
+def test_logarithmic_rejects_string_arguments():
+    from pitybas.common import ExecutionError
+
+    with pytest.raises(ExecutionError, match="ERR:DATA TYPE"):
+        disp_of('Disp log("100")')
+
+
+@pytest.mark.parametrize(
+    "expr,expected",
+    [
         ("Disp 2⁻¹", 0.5),
         ("Disp 5⁻¹", 0.2),
         ("Disp 10⁻¹", 0.1),
