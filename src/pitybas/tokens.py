@@ -449,6 +449,8 @@ class fnInt(Function):
         expr, var = _expr_and_var(arg)
         a, b = vm.get(arg[2]), vm.get(arg[3])
         tol = vm.get(arg[4]) if len(arg) == 5 else 1e-5
+        if tol <= 0:
+            raise ExecutionError("ERR:DOMAIN")
         if a == b:
             return 0
         f = _bound_eval(vm, expr, var)
