@@ -279,25 +279,32 @@ def _expr_and_var(arg):
     return expr, var
 
 
+def _scalar(value):
+    """Coerce ``value`` to a float, like the calculus/root-finding functions
+    need for their numeric arguments (and the values their bound expressions
+    evaluate to). Raises TI-style ``ExecutionError`` instead of a raw Python
+    exception for List/Matrix operands (``ERR:DATA TYPE``) or complex operands
+    with a nonzero imaginary part (``ERR:NONREAL ANS``)."""
+    if isinstance(value, list):
+        raise ExecutionError("ERR:DATA TYPE")
+    if isinstance(value, complex):
+        if value.imag != 0:
+            raise ExecutionError("ERR:NONREAL ANS")
+        value = value.real
+
+    try:
+        return float(value)
+    except (TypeError, ValueError, OverflowError):
+        raise ExecutionError("ERR:DATA TYPE") from None
+
+
 def _bound_eval(vm, expr, var):
     """Return a callable ``x -> f(x)`` that binds ``var`` to ``x`` and returns
     the expression evaluated at that point as a float."""
 
     def f(x):
         vm.set_var(var.token, x)
-        y = vm.get(expr)
-
-        if isinstance(y, list):
-            raise ExecutionError("ERR:DATA TYPE")
-        if isinstance(y, complex):
-            if y.imag != 0:
-                raise ExecutionError("ERR:NONREAL ANS")
-            y = y.real
-
-        try:
-            return float(y)
-        except (TypeError, ValueError, OverflowError):
-            raise ExecutionError("ERR:DATA TYPE") from None
+        return _scalar(vm.get(expr))
 
     return f
 
@@ -429,8 +436,8 @@ class nDeriv(Function):
         if len(arg) not in (3, 4):
             raise ExecutionError("ERR:ARGUMENT")
         expr, var = _expr_and_var(arg)
-        x = vm.get(arg[2])
-        h = vm.get(arg[3]) if len(arg) == 4 else 1e-3
+        x = _scalar(vm.get(arg[2]))
+        h = _scalar(vm.get(arg[3])) if len(arg) == 4 else 1e-3
         if h == 0:
             raise ExecutionError("ERR:DOMAIN")
         f = _bound_eval(vm, expr, var)
@@ -447,8 +454,8 @@ class fnInt(Function):
         if len(arg) not in (4, 5):
             raise ExecutionError("ERR:ARGUMENT")
         expr, var = _expr_and_var(arg)
-        a, b = vm.get(arg[2]), vm.get(arg[3])
-        tol = vm.get(arg[4]) if len(arg) == 5 else 1e-5
+        a, b = _scalar(vm.get(arg[2])), _scalar(vm.get(arg[3]))
+        tol = _scalar(vm.get(arg[4])) if len(arg) == 5 else 1e-5
         if tol <= 0:
             raise ExecutionError("ERR:DOMAIN")
         if a == b:
@@ -471,8 +478,8 @@ class fMin(Function):
         if len(arg) not in (4, 5):
             raise ExecutionError("ERR:ARGUMENT")
         expr, var = _expr_and_var(arg)
-        a, b = vm.get(arg[2]), vm.get(arg[3])
-        tol = vm.get(arg[4]) if len(arg) == 5 else 1e-5
+        a, b = _scalar(vm.get(arg[2])), _scalar(vm.get(arg[3]))
+        tol = _scalar(vm.get(arg[4])) if len(arg) == 5 else 1e-5
         if a > b:
             a, b = b, a
         f = _bound_eval(vm, expr, var)
@@ -499,13 +506,13 @@ class solve(Function):
         if len(arg) not in (3, 4):
             raise ExecutionError("ERR:ARGUMENT")
         expr, var = _expr_and_var(arg)
-        guess = vm.get(arg[2])
+        guess = _scalar(vm.get(arg[2]))
         bounds = None
         if len(arg) == 4:
             b = vm.get(arg[3])
             if not isinstance(b, list) or len(b) != 2:
                 raise ExecutionError("ERR:ARGUMENT")
-            lo, hi = b
+            lo, hi = _scalar(b[0]), _scalar(b[1])
             bounds = (lo, hi) if lo <= hi else (hi, lo)
         return _solve(_bound_eval(vm, expr, var), guess, bounds)
 

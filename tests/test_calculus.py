@@ -37,6 +37,16 @@ def test_nderiv_wrong_arg_count():
         disp_of("Disp nDeriv(X^2,X)")
 
 
+def test_nderiv_list_value_is_data_type_error():
+    with pytest.raises(ExecutionError, match="ERR:DATA TYPE"):
+        disp_of("Disp nDeriv(X,X,{1,2},.001)")
+
+
+def test_nderiv_list_step_is_data_type_error():
+    with pytest.raises(ExecutionError, match="ERR:DATA TYPE"):
+        disp_of("Disp nDeriv(X,X,3,{.001,.002})")
+
+
 # fnInt( ------------------------------------------------------------------
 
 
@@ -61,6 +71,11 @@ def test_fnint(source, expected):
 def test_fnint_wrong_arg_count():
     with pytest.raises(ExecutionError, match="ERR:ARGUMENT"):
         disp_of("Disp fnInt(X^2,X,0)")
+
+
+def test_fnint_list_bound_is_data_type_error():
+    with pytest.raises(ExecutionError, match="ERR:DATA TYPE"):
+        disp_of("Disp fnInt(X^2,X,{0,1},3)")
 
 
 # fMax( / fMin( -----------------------------------------------------------
@@ -95,6 +110,11 @@ def test_fmax(source, expected):
 def test_fmax_wrong_arg_count():
     with pytest.raises(ExecutionError, match="ERR:ARGUMENT"):
         disp_of("Disp fMax(X,X,0)")
+
+
+def test_fmin_list_bound_is_data_type_error():
+    with pytest.raises(ExecutionError, match="ERR:DATA TYPE"):
+        disp_of("Disp fMin(X^2,X,{0,1},5)")
 
 
 # solve( ------------------------------------------------------------------
@@ -134,6 +154,16 @@ def test_solve_no_bounds_no_sign_change_raises():
 def test_solve_wrong_arg_count():
     with pytest.raises(ExecutionError, match="ERR:ARGUMENT"):
         disp_of("Disp solve(X^2-4,X)")
+
+
+def test_solve_list_guess_is_data_type_error():
+    with pytest.raises(ExecutionError, match="ERR:DATA TYPE"):
+        disp_of("Disp solve(X^2-4,X,{3,4})")
+
+
+def test_solve_list_bound_element_is_data_type_error():
+    with pytest.raises(ExecutionError, match="ERR:DATA TYPE"):
+        disp_of("{1,2}->L1\nDisp solve(X^2-4,X,3,{L1,5})")
 
 
 # remainder( --------------------------------------------------------------
