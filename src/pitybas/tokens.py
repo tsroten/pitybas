@@ -1126,7 +1126,20 @@ def _remainder(dividend, divisor):
     result carries the sign of the dividend, matching the TI-84's remainder(."""
     if divisor == 0:
         raise ExecutionError("ERR:DIVIDE BY 0")
-    return dividend - divisor * int(dividend / divisor)
+
+    # Keep integer operands in integer arithmetic to avoid precision loss from
+    # float division.
+    if isinstance(dividend, int) and isinstance(divisor, int):
+        q = dividend // divisor
+        if (dividend < 0) != (divisor < 0) and dividend % divisor:
+            q += 1  # convert floor division to truncation toward zero
+        return dividend - divisor * q
+
+    try:
+        q = math.trunc(dividend / divisor)
+    except (TypeError, ValueError, OverflowError, ZeroDivisionError):
+        raise ExecutionError("ERR:DATA TYPE") from None
+    return dividend - divisor * q
 
 
 class remainder(Function):
