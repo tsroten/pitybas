@@ -285,7 +285,19 @@ def _bound_eval(vm, expr, var):
 
     def f(x):
         vm.set_var(var.token, x)
-        return float(vm.get(expr))
+        y = vm.get(expr)
+
+        if isinstance(y, list):
+            raise ExecutionError("ERR:DATA TYPE")
+        if isinstance(y, complex):
+            if y.imag != 0:
+                raise ExecutionError("ERR:NONREAL ANS")
+            y = y.real
+
+        try:
+            return float(y)
+        except (TypeError, ValueError, OverflowError):
+            raise ExecutionError("ERR:DATA TYPE") from None
 
     return f
 
