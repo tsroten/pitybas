@@ -93,11 +93,11 @@ behavior for a specific command — not required reading otherwise.
 ## Dev workflow
 
 ```
-pip install -e ".[test,lint]"
-python -m pytest
-ruff check src/ tests/
-ruff format src/ tests/
-mypy                            # only checks src/pitybas, not tests/
+uv sync --all-extras
+uv run pytest
+uv run ruff check src/ tests/
+uv run ruff format src/ tests/
+uv run mypy                     # only checks src/pitybas, not tests/
 ```
 
 CI (`.github/workflows/tests.yml`) runs pytest across Python 3.11–3.14 — don't rely on
