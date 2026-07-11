@@ -573,6 +573,23 @@ def elementwise(op, left, right):
         return op(left, right)
 
 
+def listwise(op, left, right):
+    """Apply a scalar binary op to list operands without accepting matrices."""
+    if is_matrix(left) or is_matrix(right):
+        raise ExecutionError("ERR:DATA TYPE")
+
+    if is_list(left) and is_list(right):
+        if len(left) != len(right):
+            raise ExecutionError("ERR:DIM MISMATCH")
+        return [op(a, b) for a, b in zip(left, right)]
+    elif is_list(left):
+        return [op(a, right) for a in left]
+    elif is_list(right):
+        return [op(left, b) for b in right]
+    else:
+        return op(left, right)
+
+
 def matrix_multiply(left, right):
     rows, mid = len(left), len(left[0])
     mid_b, cols = len(right), len(right[0])
@@ -1019,19 +1036,24 @@ class atanh(MathExprFunction):
 
 
 class nPr(Operator):
-    # TODO: nPr and nCr should support lists
     priority = Pri.PROB
 
     def op(self, left, right):
-        return math.factorial(left) // math.factorial((left - right))
+        return listwise(
+            lambda n, r: math.factorial(n) // math.factorial(n - r), left, right
+        )
 
 
 class nCr(Operator):
     priority = Pri.PROB
 
     def op(self, left, right):
-        return math.factorial(left) // (
-            math.factorial(right) * math.factorial((left - right))
+        return listwise(
+            lambda n, r: (
+                math.factorial(n) // (math.factorial(r) * math.factorial(n - r))
+            ),
+            left,
+            right,
         )
 
 
