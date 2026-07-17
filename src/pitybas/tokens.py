@@ -849,6 +849,95 @@ class Yscl(GraphVar):
     graph_attr = "yscl"
 
 
+class Xres(GraphVar):
+    graph_attr = "xres"
+
+    def set(self, vm, value):
+        # Xres is an integer 1-8 on real hardware; it governs DispGraph's
+        # sampling stride, so a non-positive value would otherwise break the
+        # sampler.  A whole-number float (6.0) is accepted as its integer
+        # value; a fractional value (1.5) or an out-of-range one is ERR:DOMAIN.
+        if isinstance(value, float) and value == int(value):
+            value = int(value)
+        if not isinstance(value, int) or not (1 <= value <= 8):
+            raise ExecutionError("ERR:DOMAIN")
+        setattr(vm.graph, self.graph_attr, value)
+
+
+# Function-mode equation slots, in Y= editor order (Y1..Y9 then Y0).
+EQUATION_SLOTS = ["Y%i" % i for i in range(1, 10)] + ["Y0"]
+
+
+def _eval_equation(vm, slot, x=None):
+    """Evaluate a stored Y-slot equation, optionally binding X to *x* first.
+
+    Bare ``Y1`` reads at the interpreter's current X (``x`` is None -- X is
+    left untouched); ``Y1(expr)`` binds X to the supplied value.  X is always
+    saved and restored the way DrawF does, so a call never leaks its
+    temporary binding.  Raises ERR:UNDEFINED for an empty slot, matching real
+    hardware's read of an undefined Y= function.
+    """
+    eq = vm.graph.equations.get(slot)
+    if eq is None or eq["expr"] is None:
+        raise ExecutionError("ERR:UNDEFINED")
+
+    if x is None:
+        return vm.get(eq["expr"])
+
+    had_x = "X" in vm.vars
+    old_x = vm.vars.get("X")
+    try:
+        vm.set_var("X", x)
+        return vm.get(eq["expr"])
+    finally:
+        if had_x:
+            vm.vars["X"] = old_x
+        else:
+            vm.vars.pop("X", None)
+
+
+class EquationVar(Variable, Stub):
+    """Bare ``Y1``: reads by re-evaluating its stored expression at the
+    current X; assignment (via ``Stor`` of a String) parses and holds the
+    expression unevaluated.  Storing anything but a string is ERR:DATA TYPE,
+    matching real hardware (you cannot Stor a numeric result into an
+    equation-typed variable)."""
+
+    slot: Optional[str] = None
+
+    def set(self, vm, value):
+        if not isinstance(value, str):
+            raise ExecutionError("ERR:DATA TYPE")
+        from .parse import Parser
+
+        expr = Parser.parse_expr(value)
+        # Defining (or redefining) a slot selects it, like re-entering an
+        # equation in the Y= editor.
+        vm.graph.equations[self.slot] = {"expr": expr, "enabled": True}
+
+    def get(self, vm):
+        return _eval_equation(vm, self.slot)
+
+
+class EquationFunc(Function, Stub):
+    """Callable ``Y1(expr)``: evaluates the stored expression with X
+    temporarily bound to the argument (supports cross-reference and
+    composition, e.g. ``Y3`` defined as ``"Y1(Y2)``)."""
+
+    slot: Optional[str] = None
+
+    def get(self, vm):
+        if not self.arg or len(self.arg) != 1:
+            raise ExecutionError("ERR:ARGUMENT")
+        (x,) = vm.get(self.arg)
+        return _eval_equation(vm, self.slot, x)
+
+
+for _slot in EQUATION_SLOTS:
+    add_class("Equation" + _slot, EquationVar, token=_slot, slot=_slot)
+    add_class("Equation" + _slot + "Call", EquationFunc, token=_slot, slot=_slot)
+
+
 class DelVar(Token):
     absorbs = (Expression, Variable)
 
@@ -2268,10 +2357,22 @@ class ClrDraw(Token):
         vm.io.clr_draw()
 
 
-# Graph DataBase: the window variables that fully describe the current
-# viewing window, snapshotted by StoreGDB/RecallGDB. Extend this tuple to
-# include equation state once Y1-Y9 equations exist.
-GDB_ATTRS = ("xmin", "xmax", "xscl", "ymin", "ymax", "yscl", "axes_on")
+# Graph DataBase: the scalar window variables that describe the current
+# viewing window, snapshotted by StoreGDB/RecallGDB. The Y= equation slots
+# (definitions + selection flags) are captured separately -- see
+# _snapshot_equations / StoreGDB -- because they don't live as scalar
+# vm.graph attrs.
+GDB_ATTRS = ("xmin", "xmax", "xscl", "ymin", "ymax", "yscl", "xres", "axes_on")
+
+
+def _snapshot_equations(vm):
+    """Copy the Y= equation slots for a GDB snapshot.
+
+    Each slot's entry dict is copied so later redefinitions don't mutate the
+    stored snapshot; the parsed expression itself is never mutated after
+    parsing, so it's safe to share by reference.
+    """
+    return {slot: dict(eq) for slot, eq in vm.graph.equations.items()}
 
 
 def pic_gdb_slot(vm, arg):
@@ -2313,7 +2414,9 @@ class StoreGDB(Token):
 
     def run(self, vm):
         n = pic_gdb_slot(vm, self.arg)
-        vm.gdbs[n] = {attr: getattr(vm.graph, attr) for attr in GDB_ATTRS}
+        snapshot = {attr: getattr(vm.graph, attr) for attr in GDB_ATTRS}
+        snapshot["equations"] = _snapshot_equations(vm)
+        vm.gdbs[n] = snapshot
 
 
 class RecallGDB(Token):
@@ -2323,8 +2426,17 @@ class RecallGDB(Token):
         n = pic_gdb_slot(vm, self.arg)
 
         if n in vm.gdbs:
-            for attr, value in vm.gdbs[n].items():
+            snapshot = vm.gdbs[n]
+            for attr, value in snapshot.items():
+                if attr == "equations":
+                    continue
                 setattr(vm.graph, attr, value)
+            # RecallGDB fully replaces all Y= functions (not a merge): a slot
+            # blank at Store-time recalls as blank, and one defined after the
+            # Store is cleared.
+            vm.graph.equations = {
+                slot: dict(eq) for slot, eq in snapshot.get("equations", {}).items()
+            }
             vm.io.clr_draw()
 
 
@@ -2589,6 +2701,123 @@ class DrawF(Token):
                 vm.vars.pop("X", None)
 
         vm.io.draw_function()
+
+
+class DrawInv(Token):
+    """Draw the inverse of ``expr`` -- the reflection across ``y = x`` -- by
+    plotting each sampled point with its x/y roles swapped: X values land on
+    the y-axis and the expression's values on the x-axis.  Like DrawF it
+    samples every pixel column and ignores Xres (a manual DRAW-menu command,
+    not automatic graphing)."""
+
+    absorbs = (Value, Expression)
+
+    def run(self, vm):
+        assert self.arg is not None
+        graph = vm.graph
+
+        had_x = "X" in vm.vars
+        old_x = vm.vars.get("X")
+
+        try:
+            for px in range(PIXEL_COLS):
+                x, _ = graph.to_coord(px, 0)
+                vm.set_var("X", x)
+
+                # swap axes: the value goes on the x-axis, X on the y-axis
+                pixel = graph.to_pixel(vm.get(self.arg), x)
+                if pixel is not None:
+                    graph.set_pixel(pixel[0], pixel[1], True)
+        finally:
+            if had_x:
+                vm.vars["X"] = old_x
+            else:
+                vm.vars.pop("X", None)
+
+        vm.io.draw_function()
+
+
+class DispGraph(Token):
+    """Render the graph screen: resample every *enabled* Y= function across
+    the window and plot each result.  Samples pixel columns 0-94 with a
+    stride of Xres (``x_step = ((Xmax - Xmin) / 94) * Xres``); disabled and
+    undefined slots draw nothing.  The physical [GRAPH] key is the
+    interactive equivalent -- this is its programmable form (PRGM I/O).
+
+    The pixel buffer is cleared first so a redraw after changing Y=
+    definitions or window variables can't leave stale pixels from the
+    previous plot behind, matching a full graph redraw on real hardware."""
+
+    def run(self, vm):
+        graph = vm.graph
+        xres = max(1, int(graph.xres))
+        graph.clear()
+
+        had_x = "X" in vm.vars
+        old_x = vm.vars.get("X")
+
+        try:
+            for slot in EQUATION_SLOTS:
+                eq = graph.equations.get(slot)
+                if eq is None or eq["expr"] is None or not eq["enabled"]:
+                    continue
+
+                for px in range(0, PIXEL_COLS, xres):
+                    x, _ = graph.to_coord(px, 0)
+                    vm.set_var("X", x)
+
+                    pixel = graph.to_pixel(x, vm.get(eq["expr"]))
+                    if pixel is not None:
+                        graph.set_pixel(pixel[0], pixel[1], True)
+        finally:
+            if had_x:
+                vm.vars["X"] = old_x
+            else:
+                vm.vars.pop("X", None)
+
+        vm.io.draw_function()
+
+
+def _fn_targets(vm, arg):
+    """Resolve an FnOn/FnOff argument to a list of Y-slot names.
+
+    No argument means all slots; otherwise each value is a function number
+    (1-9, or 0 for Y0).  Raises ERR:DOMAIN for anything else, matching how
+    other graph commands validate their arguments."""
+    if arg is None:
+        return list(EQUATION_SLOTS)
+
+    values = vm.get(arg)
+    if not isinstance(values, list):
+        values = [values]
+
+    slots = []
+    for n in values:
+        if not isinstance(n, int) or not (0 <= n <= 9):
+            raise ExecutionError("ERR:DOMAIN")
+        slots.append("Y%i" % n)
+    return slots
+
+
+class FnOff(Token):
+    """Deselect Y= functions so DispGraph skips them, without deleting their
+    definitions.  ``FnOff`` alone deselects all; ``FnOff 1,3`` deselects the
+    listed ones."""
+
+    absorbs = (Expression, Value, Tuple)
+    enable = False
+
+    def run(self, vm):
+        for slot in _fn_targets(vm, self.arg):
+            eq = vm.graph.equations.get(slot)
+            if eq is not None:
+                eq["enabled"] = self.enable
+
+
+class FnOn(FnOff):
+    """Select Y= functions so DispGraph plots them again (see FnOff)."""
+
+    enable = True
 
 
 class Shade(Function):

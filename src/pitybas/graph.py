@@ -6,7 +6,7 @@ real TI-83/84 convention, not the full 96x64 LCD resolution. See
 reuses.
 """
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 PIXEL_COLS = 95
 PIXEL_ROWS = 63
@@ -28,6 +28,19 @@ class GraphState:
         self.ymax: float = 10
         self.yscl: float = 1
         self.axes_on = True
+
+        # Automatic-graphing sampling stride (integer 1-8, default 1): the
+        # number of pixel columns skipped between samples when DispGraph
+        # resamples the enabled Y= functions. Manual DRAW commands
+        # (DrawF/DrawInv) sample every column and ignore this.
+        self.xres: int = 1
+
+        # Function-mode equation slots Y1-Y9/Y0, keyed by slot name
+        # ("Y1".."Y9", "Y0"). Each value is a dict with the unevaluated
+        # parsed expression (re-evaluated fresh on every read) and an
+        # enabled flag gating automatic plotting by DispGraph. Empty until a
+        # slot is defined by storing a string to it.
+        self.equations: Dict[str, Dict[str, Any]] = {}
 
         self.pixels = [[False] * PIXEL_COLS for _ in range(PIXEL_ROWS)]
 

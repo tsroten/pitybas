@@ -48,19 +48,37 @@ class Parser:
         self.stack: List[Any] = []
 
     @staticmethod
-    def parse_line(vm: Any, line: str) -> Any:
+    def parse_expr(line: str) -> Any:
+        """Parse a bare expression string into its (unevaluated) token tree.
+
+        Unlike :meth:`parse_line`, evaluation is deferred to the caller --
+        used to hold a Y1-Y9 equation definition and re-evaluate it fresh on
+        each read.  Returns *None* for an empty string.
+        """
         if not line:
             return None
 
         parser = Parser(line)
         parser.TOKENS = parser.VARIABLES + parser.FUNCTIONS + parser.OPERATORS
+        # Longest-match-first, same as the top-level parser: otherwise a
+        # shorter prefix token wins (e.g. "Y1" would lex as "Y" then "1").
+        parser.TOKENS.sort()
+        parser.TOKENS.reverse()
 
         parser.SYMBOLS = []
         for t in parser.TOKENS:
             if t[0] not in parser.SYMBOLS and not t.isalpha():
                 parser.SYMBOLS.append(t[0])
 
-        return vm.get(parser.parse()[0][0])
+        return parser.parse()[0][0]
+
+    @staticmethod
+    def parse_line(vm: Any, line: str) -> Any:
+        expr = Parser.parse_expr(line)
+        if expr is None:
+            return None
+
+        return vm.get(expr)
 
     def clean(self) -> None:
         self.source = self.source.replace("\r\n", "\n").replace("\r", "\n")
@@ -447,6 +465,21 @@ class Parser:
 
             elif char == "\n":
                 break
+
+            elif char == "→":
+                # STO terminates an *unclosed* string literal -- the closing
+                # quote is optional on real hardware, so `"HELLO→Str1` and
+                # `"X²→Y1` store the string's contents.  Only apply that
+                # shorthand when the literal really is unclosed: if a closing
+                # quote appears before the line ends, → is an ordinary
+                # character inside the string (e.g. `Disp "A→B"` or
+                # `"A→B"→Str1`).  Leaving → in place lets it tokenize as the
+                # Stor that follows.
+                rest = self.source[self.pos + 1 :]
+                newline = rest.find("\n")
+                quote = rest.find('"')
+                if quote == -1 or (newline != -1 and newline < quote):
+                    break
 
             ret += char
             self.inc()
