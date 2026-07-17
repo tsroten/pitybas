@@ -28,8 +28,8 @@ paraphrased.
 
 - **`Xmin`/`Xmax`/`Xscl`/`Ymin`/`Ymax`/`Yscl`** — implemented (`tokens.py` `GraphVar`
   subclasses). Matches the guidebook directly.
-- **`Xres`** (p.73) — **not implemented in pitybas** (no `Xres` class, no `GraphState`
-  attribute). Confirmed guidebook behavior:
+- **`Xres`** (p.73) — implemented (`tokens.py` `Xres` `GraphVar`, `GraphState.xres`,
+  THO-18/Phase G). Confirmed guidebook behavior:
   > "`Xres` sets pixel resolution (1 through 8) for function graphs only. The default is
   > 1. At `Xres`=1, functions are evaluated and graphed at each pixel on the x-axis. At
   > `Xres`=8, functions are evaluated and graphed at every eighth pixel along the x-axis."
@@ -62,11 +62,12 @@ paraphrased.
   `ZoomStat`, `ZoomFit`, `ZQuadrant1`, `ZFrac1/2`...`ZFrac1/10`) are **not implemented** —
   not currently scoped in any open Linear issue found.
 
-## Y=/equations (Chapter 3 p.66-70; not yet built — Linear THO-18, backlog)
+## Y=/equations (Chapter 3 p.66-70; implemented — Linear THO-18, Phase G)
 
-pitybas has **zero infrastructure** for `Y1`-`Y9`/`Y0` today (no tokens, no storage). The
-THO-18 issue did primary-source research before scoping the work; the key confirmed facts
-(directly from the guidebook, not inferred):
+`Y1`-`Y9`/`Y0` equation slots (`tokens.py` `EquationVar`/`EquationFunc`,
+`GraphState.equations`), `DispGraph`, `DrawInv`, `FnOn`/`FnOff`, and GDB equation
+round-tripping are implemented. The THO-18 issue did primary-source research before
+scoping the work; the key confirmed facts (directly from the guidebook, not inferred):
 
 - **Storing an equation requires a quoted string, not a bare expression** (p.68,
   "Defining a Function from the Home Screen or a Program"):
@@ -114,7 +115,7 @@ DRAW menu order, confirmed against pitybas's implementation status:
 | 5 | `Tangent(` | ❌ | Not implemented; no open Linear issue found scoping it. |
 | 6 | `DrawF` | ✅ | Cannot take a list (family of curves) per guidebook note (p.127) — worth a regression test if not already covered. |
 | 7 | `Shade(` | Partial | `Shade(lowerfunc,upperfunc[,Xleft,Xright,pattern,patres])`. `pattern` 1-4 (vertical/horizontal/-45°/+45°, default 1), `patres` 1-8 (shade every Nth pixel, default 1) (p.128). Confirmed: pitybas's `Shade` accepts this exact 2/4/6-arg signature and honors `patres` as column-sampling stride, but its own source comment admits `pattern` is accepted for signature compatibility only — every value renders as solid fill, since the real per-pattern pixel layout (vertical/horizontal/diagonal hatching) was never verified against a reference. |
-| 8 | `DrawInv` | ❌ | See below — Linear THO-18 scope, unconfirmed detail. |
+| 8 | `DrawInv` | ✅ | Implemented (THO-18/Phase G) as `DrawF` with x/y swapped, sampling every column (`Xres`-independent). See below for the unconfirmed-`Xres` detail that informed this choice. |
 | 9 | `Circle(` | ✅ | `Circle(X,Y,radius)` — note the guidebook's caution that circles drawn via the *interactive* cursor are always visually circular, but `Circle(` called programmatically can look elliptical if the window isn't square (`ZSquare` first) — this is a display-shape nuance, not a pitybas bug. |
 | 0 | `Text(` | Partial | See Strings/Text section below. |
 | A | `Pen` | ❌ | Free-form interactive drawing tool; "You cannot execute `Pen` from the home screen or a program" (p.130) — **not programmable at all** on real hardware, so it is fundamentally out of scope for a headless interpreter, not a gap. |
