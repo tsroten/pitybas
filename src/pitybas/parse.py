@@ -467,11 +467,19 @@ class Parser:
                 break
 
             elif char == "→":
-                # STO terminates an unclosed string literal -- the closing
+                # STO terminates an *unclosed* string literal -- the closing
                 # quote is optional on real hardware, so `"HELLO→Str1` and
-                # `"X²→Y1` store the string's contents.  Leave → in place so
-                # it tokenizes as the Stor that follows.
-                break
+                # `"X²→Y1` store the string's contents.  Only apply that
+                # shorthand when the literal really is unclosed: if a closing
+                # quote appears before the line ends, → is an ordinary
+                # character inside the string (e.g. `Disp "A→B"` or
+                # `"A→B"→Str1`).  Leaving → in place lets it tokenize as the
+                # Stor that follows.
+                rest = self.source[self.pos + 1 :]
+                newline = rest.find("\n")
+                quote = rest.find('"')
+                if quote == -1 or (newline != -1 and newline < quote):
+                    break
 
             ret += char
             self.inc()

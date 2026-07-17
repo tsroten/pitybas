@@ -37,6 +37,36 @@ def test_parse_unterminated_string_stops_at_newline():
     assert code[0][0].contents[0].value == "hello"
 
 
+def test_parse_closed_string_preserves_arrow():
+    # A properly closed string keeps a literal → -- the Stor shorthand only
+    # applies to *unclosed* literals.
+    code = Parser('"A→B"').parse()
+    assert code[0][0].contents[0].value == "A→B"
+
+
+def test_parse_closed_string_with_arrow_then_stor():
+    # `"A→B"→Str1` -- the → inside the closed literal is preserved and the
+    # trailing → still tokenizes as Stor.
+    contents = Parser('"A→B"→Str1').parse()[0][0].contents
+    assert contents[0].value == "A→B"
+    assert isinstance(contents[1], tokens.Stor)
+    assert contents[2].token == "Str1"
+
+
+def test_parse_disp_closed_string_with_arrow():
+    # `Disp "A→B"` must keep the arrow as a literal character.
+    disp = Parser('Disp "A→B"').parse()[0][0]
+    assert disp.arg.value == "A→B"
+
+
+def test_parse_unclosed_string_arrow_acts_as_stor():
+    # Without a closing quote, → terminates the literal and acts as Stor.
+    contents = Parser('"HELLO→Str1').parse()[0][0].contents
+    assert contents[0].value == "HELLO"
+    assert isinstance(contents[1], tokens.Stor)
+    assert contents[2].token == "Str1"
+
+
 def test_parse_expression_tokens():
     code = Parser("1+2").parse()
     expr = code[0][0]
