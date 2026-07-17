@@ -202,6 +202,14 @@ def test_dispgraph_leaves_x_undefined_if_it_was_undefined():
     assert "X" not in vm.vars
 
 
+def test_dispgraph_clears_stale_pixels_before_replotting():
+    # Redefining Y1 and re-running DispGraph must not leave pixels from the
+    # first plot behind -- a full redraw clears the buffer first.
+    vm = run('"X→Y1\nDispGraph\n"0X→Y1\nDispGraph')
+    assert vm.graph.get_pixel(94, 0) is False  # old Y1=X pixel at (10, 10)
+    assert vm.graph.get_pixel(0, 31) is True  # new Y1=0 along the x-axis
+
+
 def test_dispgraph_plots_multiple_enabled_slots():
     vm = run('"X→Y1\n"0X→Y2\nDispGraph')
     assert vm.graph.get_pixel(94, 0) is True  # Y1 at (10, 10)

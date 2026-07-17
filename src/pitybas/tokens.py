@@ -853,9 +853,10 @@ class Xres(GraphVar):
     graph_attr = "xres"
 
     def set(self, vm, value):
-        # Xres is an integer 1-8 on real hardware (a decimal truncates, an
-        # out-of-range value is ERR:DOMAIN); it governs DispGraph's sampling
-        # stride, so a non-positive value would otherwise break the sampler.
+        # Xres is an integer 1-8 on real hardware; it governs DispGraph's
+        # sampling stride, so a non-positive value would otherwise break the
+        # sampler.  A whole-number float (6.0) is accepted as its integer
+        # value; a fractional value (1.5) or an out-of-range one is ERR:DOMAIN.
         if isinstance(value, float) and value == int(value):
             value = int(value)
         if not isinstance(value, int) or not (1 <= value <= 8):
@@ -2741,11 +2742,16 @@ class DispGraph(Token):
     the window and plot each result.  Samples pixel columns 0-94 with a
     stride of Xres (``x_step = ((Xmax - Xmin) / 94) * Xres``); disabled and
     undefined slots draw nothing.  The physical [GRAPH] key is the
-    interactive equivalent -- this is its programmable form (PRGM I/O)."""
+    interactive equivalent -- this is its programmable form (PRGM I/O).
+
+    The pixel buffer is cleared first so a redraw after changing Y=
+    definitions or window variables can't leave stale pixels from the
+    previous plot behind, matching a full graph redraw on real hardware."""
 
     def run(self, vm):
         graph = vm.graph
         xres = max(1, int(graph.xres))
+        graph.clear()
 
         had_x = "X" in vm.vars
         old_x = vm.vars.get("X")
